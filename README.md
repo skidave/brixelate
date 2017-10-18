@@ -1,2 +1,4 @@
-# brixelate
-Brixelation of 3D Models
+# Brixelate
+
+A python based blender plugin to create LEGO models from 3D files.
+

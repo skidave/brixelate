@@ -52,10 +52,6 @@ class BrixelPanel(Panel):
 		opt_brick_count = scene.model_data.opt_brick_count
 
 		layout = self.layout
-
-		layout.operator("tool.bounding_box_size", text="Auto Center", icon="BBOX")
-
-		layout.separator()
 		col = layout.column(align=True)
 		box = col.box()
 		box.label("Brixelate", icon="GROUP_VERTEX")
@@ -249,31 +245,7 @@ class simpleBrixelate(Operator):
 
 	@classmethod
 	def poll(self, context):
-		scene = context.scene
-		lego = scene.lego_data
-		model_data = scene.model_data
-		model = scene.objects.active
-		brick_count = scene.model_data.brick_count
-
-		prevLoc = model_data.location
-		prevScale = model_data.scale
-		prevRot = model_data.rotation
-
-		curLoc = model.location
-		curScale = model.scale
-		curRot = model.rotation_euler
-
-		if prevLoc == curLoc and prevScale == curScale and prevRot == curRot:
-			has_moved = False
-		else:
-			has_moved = True
-
 		if len(context.selected_objects) == 1 and context.object.type == 'MESH':
-			single_obj = True
-		else:
-			single_obj = False
-
-		if single_obj and lego.x_brick is not None and has_moved == False and brick_count == 0:
 			return True
 
 	def execute(self, context):
@@ -333,6 +305,43 @@ class simpleBrixelate(Operator):
 
 	def invoke(self, context, event):
 		return self.execute(context)
+
+	def brickBounds(self, scene, object):
+		model_data = scene.model_data
+		model_data.name = object.name
+		lego = scene.lego_data
+
+		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+		vertices = [object.matrix_world * Vector(corner) for corner in object.bound_box]
+		x_vec = vertices[4] - vertices[0]
+		y_vec = vertices[3] - vertices[0]
+		z_vec = vertices[1] - vertices[0]
+
+		x_dim = round(x_vec.length, 4)
+		y_dim = round(y_vec.length, 4)
+		z_dim = round(z_vec.length, 4)
+
+		origin = object.matrix_world.to_translation()
+
+		model_data.start_point = origin
+
+		model_data.location = copy.copy(object.location)
+		model_data.scale = copy.copy(object.scale)
+		model_data.rotation = copy.copy(object.rotation_euler)
+
+		lego.x_brick = math.ceil(x_dim / lego.plate_w)
+		lego.y_brick = math.ceil(y_dim / lego.plate_d)
+		lego.z_brick = math.ceil(z_dim / lego.plate_h)
+
+		scene.my_settings.show_hide_model = True
+		scene.my_settings.show_hide_lego = True
+
+		self.report({'INFO'}, "X:%s Y:%s Z:%s" % (lego.x_brick, lego.y_brick, lego.z_brick))
+
+		total_size = lego.x_brick + lego.y_brick + lego.z_brick
+		if total_size < 10:
+			self.report({'WARNING'}, "Model is very small, consider scaling it larger.")
+		return {"FINISHED"}
 
 
 # end simpleBrixelate

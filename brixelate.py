@@ -26,6 +26,7 @@ from bpy.types import (Panel,
 					   AddonPreferences,
 					   PropertyGroup,
 					   )
+from bpy.utils import register_class, unregister_class
 import bmesh
 import math
 import mathutils
@@ -40,8 +41,8 @@ class BrixelPanel(Panel):
 	bl_space_type = "VIEW_3D"
 	bl_region_type = "TOOLS"
 	bl_context = "objectmode"
-	bl_category = "Brixel"
-	bl_label = "Brixel"
+	bl_category = "Brixelate"
+	bl_label = "Brixelate"
 
 	def draw(self, context):
 		scene = context.scene
@@ -56,11 +57,7 @@ class BrixelPanel(Panel):
 		box = col.box()
 		box.label("Brixelate", icon="GROUP_VERTEX")
 		box.prop(settings, "use_shell_as_bounds")
-		box.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
 
-		layout.separator()
-		col = layout.column(align=True)
-		box = col.box()
 		box.label("Brick Layout", icon="SCRIPT")  # or SCRIPTWIN
 		row = box.row(align=True)
 		row.prop(settings, "all_plates", text="All Plates", icon="FILE_TICK" if settings.all_plates else "RADIOBUT_OFF",
@@ -129,7 +126,7 @@ class BrixelPanel(Panel):
 						 icon="FILE_TICK" if settings.platesLarger[i] else "RADIOBUT_OFF", toggle=True)
 
 		row = box.row()
-		row.operator("tool.brick_packing", text="Layout", icon="SCRIPTWIN")
+		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
 
 		if scene.model_data.name is not None:
 			layout.separator()
@@ -166,77 +163,7 @@ class BrixelPanel(Panel):
 				row.label("Layout Brick Count:  %d" % opt_brick_count)
 
 		# end draw
-
-
 # end BrixelPanel
-
-class findBoundingBoxSize(Operator):
-	'''Auto centers and grounds the model'''
-	bl_idname = "tool.bounding_box_size"
-	bl_label = "Bounding Box Size"
-
-	@classmethod
-	def poll(self, context):
-		if len(context.selected_objects) == 1 and context.object.type == 'MESH':
-			return True
-
-	def execute(self, context):
-		start_time = time.time()
-		scene = context.scene
-		model = scene.objects.active
-		bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
-
-		model_data = scene.model_data
-		model_data.name = model.name
-		lego = scene.lego_data
-
-		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-		vertices = [model.matrix_world * Vector(corner) for corner in model.bound_box]
-		x_vec = vertices[4] - vertices[0]
-		y_vec = vertices[3] - vertices[0]
-		z_vec = vertices[1] - vertices[0]
-
-		x_dim = round(x_vec.length, 4)
-		y_dim = round(y_vec.length, 4)
-		z_dim = round(z_vec.length, 4)
-
-		origin = model.matrix_world.to_translation()
-
-		temp_location = np.absolute(origin - vertices[0]) + Vector(
-			(0, 0, -0.0001))  # final term drops model just slightly
-		new_location = Vector((0, 0, temp_location[2]))
-
-		model_data.start_point = new_location - (origin - vertices[0])
-		# bpy.context.scene.cursor_location = model_data.start_point
-		model.location = new_location
-
-		model_data.location = copy.copy(model.location)
-		model_data.scale = copy.copy(model.scale)
-		model_data.rotation = copy.copy(model.rotation_euler)
-
-		lego.x_brick = math.ceil(x_dim / lego.plate_w)
-		lego.y_brick = math.ceil(y_dim / lego.plate_d)
-		lego.z_brick = math.ceil(z_dim / lego.plate_h)
-
-		scene.my_settings.show_hide_model = True
-		scene.my_settings.show_hide_lego = True
-
-		end_time = time.time()
-		self.report({"PROPERTY"}, "Done in %5.3f seconds" % (end_time - start_time))
-
-		self.report({'INFO'}, "X:%s Y:%s Z:%s" % (lego.x_brick, lego.y_brick, lego.z_brick))
-
-		total_size = lego.x_brick + lego.y_brick + lego.z_brick
-		if total_size < 10:
-			self.report({'WARNING'}, "Model is very small, consider scaling it larger.")
-		return {"FINISHED"}
-
-	def invoke(self, context, event):
-		return self.execute(context)
-		# end invoke
-
-
-# end findBoundingBoxSize
 
 class simpleBrixelate(Operator):
 	'''Creates a LEGO assembly of the model'''
@@ -249,24 +176,63 @@ class simpleBrixelate(Operator):
 			return True
 
 	def execute(self, context):
-		start_time = time.time()
-		scene = context.scene
+		object_selected = context.selected_objects[0]
+		self.brixelate(context.scene, object_selected)
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+	def brickBounds(self, scene, object_selected):
 		model_data = scene.model_data
-		model = scene.objects[model_data.name]
+		model_data.name = object_selected.name
+		lego = scene.lego_data
+
+		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+		vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
+		x_vec = vertices[4] - vertices[0]
+		y_vec = vertices[3] - vertices[0]
+		z_vec = vertices[1] - vertices[0]
+
+		x_dim = round(x_vec.length, 4)
+		y_dim = round(y_vec.length, 4)
+		z_dim = round(z_vec.length, 4)
+
+		origin = object_selected.matrix_world.to_translation()
+
+		#start_point = vertices[0]
+
+		x_brick = math.ceil(x_dim / lego.plate_w)
+		y_brick = math.ceil(y_dim / lego.plate_d)
+		z_brick = math.ceil(z_dim / lego.plate_h)
+
+		xyz_brick = [x_brick, y_brick, z_brick]
+
+		scene.my_settings.show_hide_model = True
+		scene.my_settings.show_hide_lego = True
+
+		self.report({'INFO'}, "X:%s Y:%s Z:%s" % (x_brick, y_brick, z_brick))
+
+		total_size = x_brick + y_brick + z_brick
+		if total_size < 10:
+			self.report({'WARNING'}, "Model is very small, consider scaling it larger.")
+		return xyz_brick
+
+	def brixelate(self, scene, object_selected):
 
 		lego = scene.lego_data
 		addPlateAtPoint = lego.addPlateAtPoint
 
-		xbricks = lego.x_brick
-		ybricks = lego.y_brick
-		zbricks = lego.z_brick
+		xyz_bricks = self.brickBounds(scene, object_selected)
+		xbricks = math.ceil(xyz_bricks[0]/2)
+		ybricks = math.ceil(xyz_bricks[1]/2)
+		zbricks = math.ceil(xyz_bricks[2]/2)
 
 		w = lego.plate_w
 		d = lego.plate_d
 		h = lego.plate_h
 
-		bricks_array = model_data.bricks
-		bricks_array = np.zeros((zbricks, ybricks, xbricks))
+		bricks_array = np.zeros((zbricks*2, ybricks*2, xbricks*2))
 
 		meshCheck = scene.mesh_check
 		getVertices = meshCheck.getVertices
@@ -274,16 +240,18 @@ class simpleBrixelate(Operator):
 		rayInside = meshCheck.rayInside
 		use_shell_as_bounds = scene.my_settings.use_shell_as_bounds
 
-		start_point = model_data.start_point
+		start_point = object_selected.matrix_world.to_translation()
 
-		for x in range(xbricks):
-			for y in range(ybricks):
-				for z in range(zbricks):
+		# TODO octree apporaching to intersections - current approach is too slow.
+
+		for x in range(-xbricks, xbricks+1):
+			for y in range(-ybricks, ybricks+1):
+				for z in range(-zbricks, zbricks+1):
 					translation = Vector((x * w, y * d, z * h)) + start_point
 					vertices, centre = getVertices(translation, w, d, h)
 					edges = getEdges(vertices)
 
-					edgeIntersects, centreIntersect = rayInside(edges, centre, model)
+					edgeIntersects, centreIntersect = rayInside(edges, centre, object_selected)
 					if use_shell_as_bounds:
 						if centreIntersect and sum(edgeIntersects) == 0:
 							addPlateAtPoint(translation, [z, y, x])
@@ -293,57 +261,21 @@ class simpleBrixelate(Operator):
 							addPlateAtPoint(translation, [z, y, x])
 							bricks_array[z, y, x] = 1
 
-		model_data.bricks = bricks_array
-		model_data.brick_count = sum(sum(sum(bricks_array)))
-		model_data.opt_bricks = copy.copy(bricks_array) * -1.0
+
+		# TODO parent bricks to the selected object
+		#model_data.bricks = bricks_array
+		#model_data.brick_count = sum(sum(sum(bricks_array)))
+		#model_data.opt_bricks = copy.copy(bricks_array) * -1.0
 		# print(bricks_array)
 
-		end_time = time.time()
-		self.report({"INFO"}, "Brixelate finished in %5.3f seconds" % (end_time - start_time))
 
+		self.report({"INFO"}, "Brixelate finished")
 		return {'FINISHED'}
 
-	def invoke(self, context, event):
-		return self.execute(context)
-
-	def brickBounds(self, scene, object):
-		model_data = scene.model_data
-		model_data.name = object.name
-		lego = scene.lego_data
-
-		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-		vertices = [object.matrix_world * Vector(corner) for corner in object.bound_box]
-		x_vec = vertices[4] - vertices[0]
-		y_vec = vertices[3] - vertices[0]
-		z_vec = vertices[1] - vertices[0]
-
-		x_dim = round(x_vec.length, 4)
-		y_dim = round(y_vec.length, 4)
-		z_dim = round(z_vec.length, 4)
-
-		origin = object.matrix_world.to_translation()
-
-		model_data.start_point = origin
-
-		model_data.location = copy.copy(object.location)
-		model_data.scale = copy.copy(object.scale)
-		model_data.rotation = copy.copy(object.rotation_euler)
-
-		lego.x_brick = math.ceil(x_dim / lego.plate_w)
-		lego.y_brick = math.ceil(y_dim / lego.plate_d)
-		lego.z_brick = math.ceil(z_dim / lego.plate_h)
-
-		scene.my_settings.show_hide_model = True
-		scene.my_settings.show_hide_lego = True
-
-		self.report({'INFO'}, "X:%s Y:%s Z:%s" % (lego.x_brick, lego.y_brick, lego.z_brick))
-
-		total_size = lego.x_brick + lego.y_brick + lego.z_brick
-		if total_size < 10:
-			self.report({'WARNING'}, "Model is very small, consider scaling it larger.")
-		return {"FINISHED"}
-
-
+	def brickPacking(self, context):
+		# TODO pull brick packing code from class into this function
+		self.report({"INFO"}, "Packing finished")
+		return {'FINISHED'}
 # end simpleBrixelate
 
 class brickPacking(Operator):
@@ -574,7 +506,7 @@ class legoData():
 		newMesh.from_pydata(Vertices, [], Faces)
 		newMesh.update()
 		new_plate = bpy.data.objects.new(name_string, newMesh)
-		new_plate.location = point
+		#new_plate.location = point
 
 		# Change brick colour
 		mat_name_string = "Colour " + name_string
@@ -583,6 +515,11 @@ class legoData():
 		new_plate.data.materials[0].diffuse_color = (random.uniform(0.2, 1), 0, 0)
 
 		bpy.context.scene.objects.link(new_plate)
+
+		new_plate.select = True
+		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+		new_plate.select = False
+		new_plate.location = point
 
 	# function to create a brick with width, depth and height at a point
 	def addNewBrickAtPoint(self, point, width, depth, height, number):
@@ -622,6 +559,9 @@ class legoData():
 		new_brick.data.materials[0].diffuse_color = (0, random.uniform(0.2, 1), 0)
 
 		bpy.context.scene.objects.link(new_brick)
+		new_brick.select = True
+		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+		new_brick.select = False
 
 	def bricksToUseInLayout(self):
 		settings = bpy.context.scene.my_settings
@@ -669,19 +609,19 @@ class meshCheck():
 	def getVertices(self, pos, w, d, h):
 		vertices = \
 			[
-				pos + Vector((0, 0, 0)),
-				pos + Vector((0, d, 0)),
-				pos + Vector((w, d, 0)),
-				pos + Vector((w, 0, 0)),
-				pos + Vector((0, 0, h)),
-				pos + Vector((0, d, h)),
-				pos + Vector((w, d, h)),
-				pos + Vector((w, 0, h)),
+				pos + Vector((-w / 2, -d / 2, -h / 2)),
+				pos + Vector((-w / 2, d / 2, -h / 2)),
+				pos + Vector((w / 2, d / 2, -h / 2)),
+				pos + Vector((w / 2, -d / 2, -h / 2)),
+				pos + Vector((-w / 2, -d / 2, h / 2)),
+				pos + Vector((-w / 2, d / 2, h / 2)),
+				pos + Vector((w / 2, d / 2, h / 2)),
+				pos + Vector((w / 2, -d / 2, h / 2)),
 			]
-		centre = pos + Vector((w / 2, d / 2, h / 2))
+		centre = pos
 		return vertices, centre
 
-	def getEdges(seld, vertices):
+	def getEdges(self, vertices):
 		edges = \
 			[
 				[vertices[0], vertices[1]],
@@ -849,14 +789,11 @@ class MySettings(PropertyGroup):
 								 default=(True, True, True, True, True, True))  # 1x1,2,3,4,6,8
 	bricks2 = BoolVectorProperty(name="2xN Bricks", size=5, default=(True, True, True, True, True))  # 2x2,3,4,6,8
 
+classes = (simpleBrixelate, brickPacking, resetBrixelate, BrixelPanel, MySettings)
 
 def register():
-	bpy.utils.register_class(findBoundingBoxSize)
-	bpy.utils.register_class(simpleBrixelate)
-	bpy.utils.register_class(brickPacking)
-	bpy.utils.register_class(resetBrixelate)
-	bpy.utils.register_class(BrixelPanel)
-	bpy.utils.register_class(MySettings)
+	for c in classes:
+		register_class(c)
 
 	bpy.types.Scene.lego_data = legoData()
 	bpy.types.Scene.model_data = modelData()
@@ -867,12 +804,8 @@ def register():
 # end register
 
 def unregister():
-	bpy.utils.unregister_class(findBoundingBoxSize)
-	bpy.utils.unregister_class(simpleBrixelate)
-	bpy.utils.unregister_class(brickPacking)
-	bpy.utils.unregister_class(resetBrixelate)
-	bpy.utils.unregister_class(BrixelPanel)
-	bpy.utils.unregister_class(MySettings)
+	for c in classes:
+		unregister_class(c)
 
 	del bpy.types.Scene.lego_data
 	del bpy.types.Scene.model_data

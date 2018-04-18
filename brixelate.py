@@ -169,6 +169,7 @@ class simpleBrixelate(Operator):
 	'''Creates a LEGO assembly of the model'''
 	bl_idname = "tool.simple_brixelate"
 	bl_label = "Simple Brixelate"
+	bl_options = {"UNDO"}
 
 	@classmethod
 	def poll(self, context):
@@ -200,8 +201,6 @@ class simpleBrixelate(Operator):
 
 		origin = object_selected.matrix_world.to_translation()
 
-		#start_point = vertices[0]
-
 		x_brick = math.ceil(x_dim / lego.plate_w)
 		y_brick = math.ceil(y_dim / lego.plate_d)
 		z_brick = math.ceil(z_dim / lego.plate_h)
@@ -222,6 +221,8 @@ class simpleBrixelate(Operator):
 
 		lego = scene.lego_data
 		addPlateAtPoint = lego.addPlateAtPoint
+		createInitialPlate = lego.createInitialPlate
+		copyPlatesToPoints = lego.copyPlatesToPoints
 
 		xyz_bricks = self.brickBounds(scene, object_selected)
 		xbricks = math.ceil(xyz_bricks[0]/2)
@@ -232,7 +233,7 @@ class simpleBrixelate(Operator):
 		d = lego.plate_d
 		h = lego.plate_h
 
-		bricks_array = np.zeros((zbricks*2, ybricks*2, xbricks*2))
+		bricks_array = np.zeros((zbricks*2 + 1, ybricks*2+1, xbricks*2+1))
 
 		meshCheck = scene.mesh_check
 		getVertices = meshCheck.getVertices
@@ -243,7 +244,9 @@ class simpleBrixelate(Operator):
 		start_point = object_selected.matrix_world.to_translation()
 
 		# TODO octree apporaching to intersections - current approach is too slow.
-
+		object_selected.select = False
+		createInitialPlate()
+		start_time = time.time()
 		for x in range(-xbricks, xbricks+1):
 			for y in range(-ybricks, ybricks+1):
 				for z in range(-zbricks, zbricks+1):
@@ -254,21 +257,26 @@ class simpleBrixelate(Operator):
 					edgeIntersects, centreIntersect = rayInside(edges, centre, object_selected)
 					if use_shell_as_bounds:
 						if centreIntersect and sum(edgeIntersects) == 0:
-							addPlateAtPoint(translation, [z, y, x])
-							bricks_array[z, y, x] = 1
+							# addPlateAtPoint(translation, [z, y, x])
+							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 					else:
 						if centreIntersect or sum(edgeIntersects) > 0:
-							addPlateAtPoint(translation, [z, y, x])
-							bricks_array[z, y, x] = 1
+							# addPlateAtPoint(translation, [z, y, x])
+							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
+		end_time = time.time()
+		self.report({"INFO"}, "Testing done in %5.3f seconds" % (end_time - start_time))
 
-
+		start_time = time.time()
+		copyPlatesToPoints(start_point, bricks_array)
+		end_time = time.time()
+		self.report({"INFO"}, "Copying done in %5.3f seconds" % (end_time - start_time))
 		# TODO parent bricks to the selected object
 		#model_data.bricks = bricks_array
 		#model_data.brick_count = sum(sum(sum(bricks_array)))
 		#model_data.opt_bricks = copy.copy(bricks_array) * -1.0
 		# print(bricks_array)
 
-
+		object_selected.select = True
 		self.report({"INFO"}, "Brixelate finished")
 		return {'FINISHED'}
 
@@ -506,7 +514,6 @@ class legoData():
 		newMesh.from_pydata(Vertices, [], Faces)
 		newMesh.update()
 		new_plate = bpy.data.objects.new(name_string, newMesh)
-		#new_plate.location = point
 
 		# Change brick colour
 		mat_name_string = "Colour " + name_string
@@ -520,6 +527,84 @@ class legoData():
 		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 		new_plate.select = False
 		new_plate.location = point
+
+	def createInitialPlate(self):
+		Vertices = \
+			[
+				Vector((0, 0, 0)),
+				Vector((0, self.plate_d, 0)),
+				Vector((self.plate_w, self.plate_d, 0)),
+				Vector((self.plate_w, 0, 0)),
+				Vector((0, 0, self.plate_h)),
+				Vector((0, self.plate_d, self.plate_h)),
+				Vector((self.plate_w, self.plate_d, self.plate_h)),
+				Vector((self.plate_w, 0, self.plate_h)),
+			]
+
+		Faces = \
+			[
+				(0, 1, 2, 3),
+				(5, 4, 7, 6),
+				(0, 4, 5, 1),
+				(2, 1, 5, 6),
+				(2, 6, 7, 3),
+				(3, 7, 4, 0)
+			]
+		name_string = "initial_plate"
+		newMesh = bpy.data.meshes.new(name_string)
+		newMesh.from_pydata(Vertices, [], Faces)
+		newMesh.update()
+		init_plate = bpy.data.objects.new(name_string, newMesh)
+		bpy.context.scene.objects.link(init_plate)
+		init_plate.select = True
+		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+		init_plate.select = False
+		init_plate.location = Vector((0,0,0))
+
+	def copyPlatesToPoints(self, start_point, bricks_array):
+
+		z_array, y_array, x_array = bricks_array.shape[0], bricks_array.shape[1], bricks_array.shape[2]
+		x_offset = (x_array - 1) / 2
+		y_offset = (y_array - 1) / 2
+		z_offset = (z_array - 1) / 2
+
+		w = self.plate_w
+		d = self.plate_d
+		h = self.plate_h
+
+		new_plates = []
+		initial_plate = bpy.data.objects["initial_plate"]
+		start_time = time.time()
+		for x in range(x_array):
+			for y in range(y_array):
+				for z in range(z_array):
+					if bricks_array[z, y, x] == 1:
+						translation = Vector(((x-x_offset) * w, (y-y_offset) * d, (z-z_offset) * h)) + start_point
+						copy = initial_plate.copy()
+						copy.location = translation
+						copy.data = copy.data.copy()  # also duplicate mesh, remove for linked duplicate
+						copy.name = "1x1 position: " + str(x) + ',' + str(y) + ',' + str(z)
+						new_plates.append(copy)
+
+
+		end_time = time.time()
+		print("Copying: Translating done in %5.3f seconds" % (end_time - start_time))
+
+		start_time = time.time()
+		for plate in new_plates:
+			bpy.context.scene.objects.link(plate)
+			self.randomiseColour(plate)
+		end_time = time.time()
+		print("Copying: Linking done in %5.3f seconds" % (end_time - start_time))
+
+		bpy.data.objects.remove(initial_plate, True)
+
+
+	def randomiseColour(self, object):
+		mat_name_string = "Colour " + object.name
+		colour = bpy.data.materials.new(name=mat_name_string)
+		object.data.materials.append(colour)
+		object.data.materials[0].diffuse_color = (random.uniform(0.2, 1), 0, 0)
 
 	# function to create a brick with width, depth and height at a point
 	def addNewBrickAtPoint(self, point, width, depth, height, number):
@@ -558,7 +643,7 @@ class legoData():
 		new_brick.data.materials.append(colour)
 		new_brick.data.materials[0].diffuse_color = (0, random.uniform(0.2, 1), 0)
 
-		bpy.context.scene.objects.link(new_brick)
+		#bpy.context.scene.objects.link(new_brick)
 		new_brick.select = True
 		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 		new_brick.select = False
@@ -689,6 +774,71 @@ class meshCheck():
 			centreIntersect = False
 
 		return edgeIntersects, centreIntersect
+
+	def CheckBrickIntersect(self, centre, object):
+
+		if self.CheckCentreInside(centre, object):
+			brickIntersect = True
+
+		return brickIntersect
+
+	def CheckCentreInside(self, centre, object):
+
+		world_to_obj = object.matrix_world.inverted()
+
+		axes = \
+			[
+				Vector((1, 0, 0)),
+				Vector((-1, 0, 0)),
+				Vector((0, 1, 0)),
+				Vector((0, -1, 0)),
+				Vector((0, 0, 1)),
+				Vector((0, 0, -1))
+			]
+
+		count = 0
+		for a in axes:
+			ray_dir = world_to_obj * (centre + a) - world_to_obj * centre
+			ray_dir.normalize()
+			f = object.ray_cast(world_to_obj * centre, ray_dir, 10000)
+			hit, loc, normal, face_idx = f
+
+			if hit:
+				count += 1
+
+		if count == 6:
+			centreInside = True
+		else:
+			centreInside = False
+
+		return centreInside
+
+	def CheckBVHIntersection(self, object1, object2):
+		'''This function checks surface intersections of two objects, will not detect if one is fully inside another'''
+		BVHTree = mathutils.bvhtree.BVHTree
+		# create bmesh objects
+		obj1_bmesh = bmesh.new()
+		obj2_bmesh = bmesh.new()
+		obj1_bmesh.from_mesh(object1.data)
+		obj2_bmesh.from_mesh(object2.data)
+
+		obj1_bmesh.transform(object1.matrix_world)
+		obj2_bmesh.transform(object2.matrix_world)
+
+		# make BVH tree from BMesh of objects
+		obj1_BVHtree = BVHTree.FromBMesh(obj1_bmesh)
+		obj2_BVHtree = BVHTree.FromBMesh(obj2_bmesh)
+
+		# get intersecting pairs
+		inter = obj1_BVHtree.overlap(obj2_BVHtree)
+
+		# if list is empty, no objects are touching
+		if inter != []:
+			touching = True
+		else:
+			touching = False
+
+		return touching
 
 
 def showHideModel(self, context):

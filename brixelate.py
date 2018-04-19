@@ -243,9 +243,9 @@ class simpleBrixelate(Operator):
 
 		start_point = object_selected.matrix_world.to_translation()
 
-		# TODO octree apporaching to intersections - current approach is too slow.
+
 		object_selected.select = False
-		createInitialPlate()
+
 		start_time = time.time()
 		for x in range(-xbricks, xbricks+1):
 			for y in range(-ybricks, ybricks+1):
@@ -257,19 +257,19 @@ class simpleBrixelate(Operator):
 					edgeIntersects, centreIntersect = rayInside(edges, centre, object_selected)
 					if use_shell_as_bounds:
 						if centreIntersect and sum(edgeIntersects) == 0:
-							# addPlateAtPoint(translation, [z, y, x])
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 					else:
 						if centreIntersect or sum(edgeIntersects) > 0:
-							# addPlateAtPoint(translation, [z, y, x])
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 		end_time = time.time()
 		self.report({"INFO"}, "Testing done in %5.3f seconds" % (end_time - start_time))
 
 		start_time = time.time()
-		copyPlatesToPoints(start_point, bricks_array)
+		self.brickPacking(scene, bricks_array, start_point)
 		end_time = time.time()
-		self.report({"INFO"}, "Copying done in %5.3f seconds" % (end_time - start_time))
+		self.report({"INFO"}, "Packing done in %5.3f seconds" % (end_time - start_time))
+		# copyPlatesToPoints(start_point, bricks_array)
+
 		# TODO parent bricks to the selected object
 		#model_data.bricks = bricks_array
 		#model_data.brick_count = sum(sum(sum(bricks_array)))
@@ -280,9 +280,88 @@ class simpleBrixelate(Operator):
 		self.report({"INFO"}, "Brixelate finished")
 		return {'FINISHED'}
 
-	def brickPacking(self, context):
+	def brickPacking(self, scene, bricks_array, start_point):
 		# TODO pull brick packing code from class into this function
-		self.report({"INFO"}, "Packing finished")
+
+		lego_data = scene.lego_data
+
+		bricks = bricks_array
+		opt_bricks = copy.copy(bricks_array) * -1.0
+
+		list_of_pieces = lego_data.bricksToUseInLayout()
+		directional_list_of_pieces = []
+		for piece in list_of_pieces:
+			directional_list_of_pieces.append(piece)
+			if piece[0] != piece[1]:
+				piece_alt_dir = [piece[1], piece[0], piece[2]]
+				directional_list_of_pieces.append(piece_alt_dir)
+
+		w = lego_data.plate_w
+		d = lego_data.plate_d
+		h = lego_data.plate_h
+		addNewBrickAtPoint = lego_data.addNewBrickAtPoint
+
+		z_array, y_array, x_array = bricks.shape[0], bricks.shape[1], bricks.shape[2]
+		x_offset = (x_array - 1) / 2
+		y_offset = (y_array - 1) / 2
+		z_offset = (z_array - 1) / 2
+
+		brick_num = 1
+		for z in range(z_array):
+			for y in range(y_array):
+				for x in range(x_array):
+					if bricks[z, y, x] == 1 and opt_bricks[z, y, x] == -1:
+						for piece in directional_list_of_pieces:
+							count = 0
+							next_piece = False
+							max_count = piece[0] * piece[1] * piece[2]
+							p_list = []
+							p_append = p_list.append
+
+							for px in range(piece[0]):
+								if next_piece:
+									break
+								for py in range(piece[1]):
+									if next_piece:
+										break
+									for pz in range(piece[2]):
+										next_z = z + pz
+										next_y = y + py
+										next_x = x + px
+										if next_z < z_array and next_y < y_array and next_x < x_array:
+											if bricks[next_z, next_y, next_x] == 1 and opt_bricks[
+												next_z, next_y, next_x] == -1:
+												count += 1
+												p_append([next_z, next_y, next_x])
+											else:
+												next_piece = True
+												break
+										else:
+											next_piece = True
+											break
+
+							if count == max_count:
+								for p in p_list:
+									opt_bricks[p[0], p[1], p[2]] = brick_num
+
+								height = p_list[max_count - 1][0] - p_list[0][0] + 1
+								depth = p_list[max_count - 1][1] - p_list[0][1] + 1
+								width = p_list[max_count - 1][2] - p_list[0][2] + 1
+
+								x_pos = ((width - 1) / 2) * w
+								y_pos = ((depth - 1) / 2) * d
+								z_pos = ((height - 1) / 2) * h
+
+								translation = Vector(((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
+								translation += Vector((x_pos, y_pos, z_pos))
+								addNewBrickAtPoint(translation, width, depth, height, brick_num)
+								brick_num += 1
+
+		#model_data.opt_bricks = opt_bricks
+		#model_data.opt_brick_count = brick_num - 1
+		scene.my_settings.show_hide_lego = False
+		scene.my_settings.show_hide_optimised = True
+
 		return {'FINISHED'}
 # end simpleBrixelate
 
@@ -374,7 +453,7 @@ class brickPacking(Operator):
 								# print(height)
 								# print("Depth %d" % depth)
 								# print("Width %d" % width)
-								addNewBrick(translation, width, depth, height, brick_num)
+								lego_data.addNewBrick(translation, width, depth, height, brick_num)
 								brick_num += 1
 
 		model_data.opt_bricks = opt_bricks
@@ -427,7 +506,7 @@ class resetBrixelate(Operator):
 
 		scene.lego_data.x_brick, scene.lego_data.y_brick, scene.lego_data.z_brick = [None, None, None]
 
-		bpy.ops.tool.bounding_box_size()
+		#bpy.ops.tool.bounding_box_size()
 		end_time = time.time()
 		self.report({"INFO"}, "Reset finished in %5.3f seconds" % (end_time - start_time))
 
@@ -562,7 +641,7 @@ class legoData():
 		init_plate.location = Vector((0,0,0))
 
 	def copyPlatesToPoints(self, start_point, bricks_array):
-
+		self.createInitialPlate()
 		z_array, y_array, x_array = bricks_array.shape[0], bricks_array.shape[1], bricks_array.shape[2]
 		x_offset = (x_array - 1) / 2
 		y_offset = (y_array - 1) / 2
@@ -608,16 +687,21 @@ class legoData():
 
 	# function to create a brick with width, depth and height at a point
 	def addNewBrickAtPoint(self, point, width, depth, height, number):
+
+		w = self.plate_w
+		d = self.plate_d
+		h = self.plate_h
+
 		Vertices = \
 			[
 				Vector((0, 0, 0)),
-				Vector((0, self.plate_d * depth, 0)),
-				Vector((self.plate_w * width, self.plate_d * depth, 0)),
-				Vector((self.plate_w * width, 0, 0)),
-				Vector((0, 0, self.plate_h * height)),
-				Vector((0, self.plate_d * depth, self.plate_h * height)),
-				Vector((self.plate_w * width, self.plate_d * depth, self.plate_h * height)),
-				Vector((self.plate_w * width, 0, self.plate_h * height)),
+				Vector((0, d * depth, 0)),
+				Vector((w * width, d * depth, 0)),
+				Vector((w * width, 0, 0)),
+				Vector((0, 0, h * height)),
+				Vector((0, d * depth, h * height)),
+				Vector((w * width, d * depth, h * height)),
+				Vector((w * width, 0, h * height)),
 			]
 
 		Faces = \
@@ -635,18 +719,15 @@ class legoData():
 		newMesh.from_pydata(Vertices, [], Faces)
 		newMesh.update()
 		new_brick = bpy.data.objects.new(name_string, newMesh)
-		new_brick.location = point
+		bpy.context.scene.objects.link(new_brick)
 
 		# Change brick colour
-		mat_name_string = name_string + " Colour"
-		colour = bpy.data.materials.new(name=mat_name_string)
-		new_brick.data.materials.append(colour)
-		new_brick.data.materials[0].diffuse_color = (0, random.uniform(0.2, 1), 0)
+		self.randomiseColour(new_brick)
 
-		#bpy.context.scene.objects.link(new_brick)
 		new_brick.select = True
 		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 		new_brick.select = False
+		new_brick.location = point
 
 	def bricksToUseInLayout(self):
 		settings = bpy.context.scene.my_settings

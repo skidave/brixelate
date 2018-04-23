@@ -184,39 +184,6 @@ class simpleBrixelate(Operator):
 	def invoke(self, context, event):
 		return self.execute(context)
 
-	def brickBounds(self, scene, object_selected):
-		model_data = scene.model_data
-		model_data.name = object_selected.name
-		lego = scene.lego_data
-
-		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-		vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
-		x_vec = vertices[4] - vertices[0]
-		y_vec = vertices[3] - vertices[0]
-		z_vec = vertices[1] - vertices[0]
-
-		x_dim = round(x_vec.length, 4)
-		y_dim = round(y_vec.length, 4)
-		z_dim = round(z_vec.length, 4)
-
-		origin = object_selected.matrix_world.to_translation()
-
-		x_brick = math.ceil(x_dim / lego.plate_w)
-		y_brick = math.ceil(y_dim / lego.plate_d)
-		z_brick = math.ceil(z_dim / lego.plate_h)
-
-		xyz_brick = [x_brick, y_brick, z_brick]
-
-		scene.my_settings.show_hide_model = True
-		scene.my_settings.show_hide_lego = True
-
-		self.report({'INFO'}, "X:%s Y:%s Z:%s" % (x_brick, y_brick, z_brick))
-
-		total_size = x_brick + y_brick + z_brick
-		if total_size < 10:
-			self.report({'WARNING'}, "Model is very small, consider scaling it larger.")
-		return xyz_brick
-
 	def brixelate(self, scene, object_selected):
 
 		lego = scene.lego_data
@@ -262,27 +229,64 @@ class simpleBrixelate(Operator):
 						if centreIntersect or sum(edgeIntersects) > 0:
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 		end_time = time.time()
-		self.report({"INFO"}, "Testing done in %5.3f seconds" % (end_time - start_time))
+		self.report({"PROPERTY"}, "Testing done in %5.3f seconds" % (end_time - start_time))
 
-		start_time = time.time()
-		self.brickPacking(scene, bricks_array, start_point)
-		end_time = time.time()
-		self.report({"INFO"}, "Packing done in %5.3f seconds" % (end_time - start_time))
-		# copyPlatesToPoints(start_point, bricks_array)
+		lego_volume = self.brickPacking(scene, bricks_array, start_point)
+		print(lego_volume)
+
+		#bm = self.bmesh_copy_from_object(object_selected, apply_modifiers=True)
+		bm = bmesh.new()
+		bm.from_mesh(object_selected.data)
+		bmesh.ops.triangulate(bm, faces=bm.faces)
+		object_volume = bm.calc_volume()
+
+		print(object_volume)
+		#volume_difference = abs(object_volume - lego_volume)
+		volume_percent = (lego_volume / object_volume)
+
+		self.report({"INFO"},"{:.2%}  LEGO -> Object Volume".format(volume_percent))
 
 		# TODO parent bricks to the selected object
-		#model_data.bricks = bricks_array
-		#model_data.brick_count = sum(sum(sum(bricks_array)))
-		#model_data.opt_bricks = copy.copy(bricks_array) * -1.0
-		# print(bricks_array)
 
 		object_selected.select = True
 		self.report({"INFO"}, "Brixelate finished")
 		return {'FINISHED'}
 
-	def brickPacking(self, scene, bricks_array, start_point):
-		# TODO pull brick packing code from class into this function
+	def brickBounds(self, scene, object_selected):
+		model_data = scene.model_data
+		model_data.name = object_selected.name
+		lego = scene.lego_data
 
+		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+		vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
+		x_vec = vertices[4] - vertices[0]
+		y_vec = vertices[3] - vertices[0]
+		z_vec = vertices[1] - vertices[0]
+
+		x_dim = round(x_vec.length, 4)
+		y_dim = round(y_vec.length, 4)
+		z_dim = round(z_vec.length, 4)
+
+		origin = object_selected.matrix_world.to_translation()
+
+		x_brick = math.ceil(x_dim / lego.plate_w)
+		y_brick = math.ceil(y_dim / lego.plate_d)
+		z_brick = math.ceil(z_dim / lego.plate_h)
+
+		xyz_brick = [x_brick, y_brick, z_brick]
+
+		scene.my_settings.show_hide_model = True
+		scene.my_settings.show_hide_lego = True
+
+		self.report({'PROPERTY'}, "LEGO Dimensions  X:{0} Y:{1} Z:{2}".format(x_brick, y_brick, z_brick))
+
+		total_size = x_brick + y_brick + z_brick
+		if total_size < 10:
+			self.report({'WARNING'}, "Model is very small, consider scaling it larger.")
+		return xyz_brick
+
+	def brickPacking(self, scene, bricks_array, start_point):
+		start_time = time.time()
 		lego_data = scene.lego_data
 
 		bricks = bricks_array
@@ -307,6 +311,7 @@ class simpleBrixelate(Operator):
 		z_offset = (z_array - 1) / 2
 
 		brick_num = 1
+		volume_count = 0
 		for z in range(z_array):
 			for y in range(y_array):
 				for x in range(x_array):
@@ -341,9 +346,9 @@ class simpleBrixelate(Operator):
 											break
 
 							if count == max_count:
+
 								for p in p_list:
 									opt_bricks[p[0], p[1], p[2]] = brick_num
-
 								height = p_list[max_count - 1][0] - p_list[0][0] + 1
 								depth = p_list[max_count - 1][1] - p_list[0][1] + 1
 								width = p_list[max_count - 1][2] - p_list[0][2] + 1
@@ -356,13 +361,49 @@ class simpleBrixelate(Operator):
 								translation += Vector((x_pos, y_pos, z_pos))
 								addNewBrickAtPoint(translation, width, depth, height, brick_num)
 								brick_num += 1
+								volume_count += width * depth * height
 
-		#model_data.opt_bricks = opt_bricks
-		#model_data.opt_brick_count = brick_num - 1
+		lego_volume = volume_count * w * d * h
+
 		scene.my_settings.show_hide_lego = False
 		scene.my_settings.show_hide_optimised = True
 
-		return {'FINISHED'}
+		end_time = time.time()
+		self.report({"PROPERTY"}, "Packing done in %5.3f seconds" % (end_time - start_time))
+		# TODO add list of bricks used.
+		return lego_volume
+
+	def bmesh_copy_from_object(obj, transform=True, triangulate=True, apply_modifiers=False):
+		"""
+		Returns a transformed, triangulated copy of the mesh
+		"""
+
+		#assert (obj.type == 'MESH')
+		print(obj.type)
+
+		if apply_modifiers and obj.modifiers:
+			import bpy
+			me = obj.to_mesh(bpy.context.scene, True, 'PREVIEW', calc_tessface=False)
+			bm = bmesh.new()
+			bm.from_mesh(me)
+			bpy.data.meshes.remove(me)
+			del bpy
+		else:
+			me = obj.data
+			if obj.mode == 'EDIT':
+				bm_orig = bmesh.from_edit_mesh(me)
+				bm = bm_orig.copy()
+			else:
+				bm = bmesh.new()
+				bm.from_mesh(me)
+
+		if transform:
+			bm.transform(obj.matrix_world)
+
+		if triangulate:
+			bmesh.ops.triangulate(bm, faces=bm.faces)
+
+		return bm
 # end simpleBrixelate
 
 class brickPacking(Operator):
@@ -490,21 +531,11 @@ class resetBrixelate(Operator):
 		objs = bpy.data.objects
 		for ob in scene.objects:
 			ob.hide = False
-			if ob.name != model_name:
+			if ob.name.startswith('Brick'):
 				objs.remove(ob, True)
 
-		model = scene.objects[model_name]
-		model.select = True
-		scene.objects.active = model
-		scene.model_data.bricks = np.array([[[0]]])
-		scene.model_data.brick_count = 0
-		scene.model_data.opt_bricks = np.array([[[0]]])
-		scene.model_data.opt_brick_count = 0
-		scene.model_data.start_point = []
 		scene.my_settings.show_hide_model = True
 		scene.my_settings.show_hide_lego = True
-
-		scene.lego_data.x_brick, scene.lego_data.y_brick, scene.lego_data.z_brick = [None, None, None]
 
 		#bpy.ops.tool.bounding_box_size()
 		end_time = time.time()

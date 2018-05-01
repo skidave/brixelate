@@ -126,6 +126,14 @@ class BrixelPanel(Panel):
 		row = box.row()
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
 
+		layout.separator()
+		box = layout.box()
+		box.label("Experiments", icon="FCURVE")
+		box.operator("tool.brixelate_experiments", text="Run", icon="FILE_TICK")
+
+		layout.separator()
+		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
+
 		if len(scene.objects) > 0:
 			layout.separator()
 			col = layout.column(align=True)
@@ -140,9 +148,6 @@ class BrixelPanel(Panel):
 			row.label(text="LEGO", icon="GROUP_VERTEX")
 			row.prop(settings, "show_hide_lego", text=("Visible" if settings.show_hide_lego else "Hidden"),
 					 toggle=True)
-
-		layout.separator()
-		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
 
 		if brick_count > 0:
 			layout.separator()
@@ -166,6 +171,7 @@ class simpleBrixelate(Operator):
 
 	@classmethod
 	def poll(self, context):
+		# TODO prevent running if no bricks selected
 		if len(context.selected_objects) == 1 and context.object.type == 'MESH':
 			return True
 
@@ -175,7 +181,7 @@ class simpleBrixelate(Operator):
 		use_shell_as_bounds = context.scene.my_settings.use_shell_as_bounds
 		bricks_to_use, _ = context.scene.lego_data.listOfBricksToUse()
 
-		Brixelate.brixelate(context.scene, object_selected, use_shell_as_bounds, bricks_to_use)
+		_ = Brixelate.brixelate(context.scene, object_selected, use_shell_as_bounds, bricks_to_use)
 		self.report({"INFO"}, "Brixelate finished")
 		return {'FINISHED'}
 
@@ -184,6 +190,47 @@ class simpleBrixelate(Operator):
 
 
 # end simpleBrixelate
+
+class experimentation(Operator):
+	'''Tests Brixelation of All Selected Objects in the Scene'''
+	bl_idname = "tool.brixelate_experiments"
+	bl_label = "Brixelate Experimentation"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if len(context.selected_objects) > 0 and context.object.type == 'MESH':
+			return True
+
+	def execute(self, context):
+		Brixelate = context.scene.Brixelate
+
+		use_shell_as_bounds = context.scene.my_settings.use_shell_as_bounds
+		bricks_to_use, brick_names = context.scene.lego_data.listOfBricksToUse()
+
+		brick_string = ''
+		for name in brick_names:
+			brick_string = brick_string + name + ','
+
+		csv_header = 'name,x_dim,y_dim,z_dim,percent volume,brick_count,' + brick_string + '\r\n'
+
+		csv_content = ''
+		for obj in context.selected_objects:
+			output_data = Brixelate.brixelate(context.scene, obj, use_shell_as_bounds, bricks_to_use)
+			csv_content += output_data
+
+		full_csv = csv_header + csv_content
+		print(full_csv)
+
+		self.report({"INFO"}, "Experiments ran on {0} objects".format(len(context.selected_objects)))
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
+# end simpleBrixelate
+
 
 class brixelateFunctions():
 	def brixelate(self, scene, object_selected, use_shell_as_bounds, bricks_to_use):
@@ -249,10 +296,21 @@ class brixelateFunctions():
 		scene.my_settings.show_hide_model = True
 		scene.my_settings.show_hide_lego = True
 
-		#name, vol, brick_count,
-		# output_data =
+		# name, dimensions, vol, brick_count, bricks
+		name_string = object_selected.name + ','
+		dimensions_string = '{:f},{:f},{:f},'.format(object_selected.dimensions[0], object_selected.dimensions[1], object_selected.dimensions[2])
+		volume_string = '{:f},'.format(volume_percent)
+		brick_count_string = '{:d},'.format(brick_count)
 
-		return None
+		# TODO sort dictionary ordering
+		bricks_used_string = ''
+		for i in used_bricks_dict.values():
+			string = str(i) + ','
+			bricks_used_string += string
+
+		output_data = name_string + dimensions_string + volume_string + brick_count_string + bricks_used_string + '\r\n'
+
+		return output_data
 
 	def brickBounds(self, scene, object_selected):
 		lego = scene.lego_data
@@ -829,7 +887,7 @@ class MySettings(PropertyGroup):
 	bricks2 = BoolVectorProperty(name="2xN Bricks", size=5, default=(True, True, True, True, True))  # 2x2,3,4,6,8
 
 
-classes = (simpleBrixelate, resetBrixelate, BrixelPanel, MySettings)
+classes = (simpleBrixelate, resetBrixelate, experimentation, BrixelPanel, MySettings)
 
 
 def register():

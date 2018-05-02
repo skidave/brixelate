@@ -35,7 +35,8 @@ import numpy as np
 import random
 import time
 import copy
-from collections import Counter
+import os
+from operator import itemgetter
 
 
 class BrixelPanel(Panel):
@@ -179,9 +180,9 @@ class simpleBrixelate(Operator):
 		Brixelate = context.scene.Brixelate
 		object_selected = context.selected_objects[0]
 		use_shell_as_bounds = context.scene.my_settings.use_shell_as_bounds
-		bricks_to_use, _ = context.scene.lego_data.listOfBricksToUse()
+		bricks_to_use = context.scene.lego_data.listOfBricksToUse()
 
-		_ = Brixelate.brixelate(context.scene, object_selected, use_shell_as_bounds, bricks_to_use)
+		Brixelate.brixelate(context.scene, object_selected, use_shell_as_bounds, bricks_to_use)
 		self.report({"INFO"}, "Brixelate finished")
 		return {'FINISHED'}
 
@@ -203,26 +204,38 @@ class experimentation(Operator):
 			return True
 
 	def execute(self, context):
+		start = time.time()
 		Brixelate = context.scene.Brixelate
 
 		use_shell_as_bounds = context.scene.my_settings.use_shell_as_bounds
-		bricks_to_use, brick_names = context.scene.lego_data.listOfBricksToUse()
+		bricks_to_use = context.scene.lego_data.listOfBricksToUse()
 
 		brick_string = ''
-		for name in brick_names:
+		for name in bricks_to_use:
 			brick_string = brick_string + name + ','
 
-		csv_header = 'name,x_dim,y_dim,z_dim,percent volume,brick_count,' + brick_string + '\r\n'
+		csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + '\n'
 
 		csv_content = ''
 		for obj in context.selected_objects:
-			output_data = Brixelate.brixelate(context.scene, obj, use_shell_as_bounds, bricks_to_use)
+			output_data = Brixelate.brixelate(context.scene, obj, use_shell_as_bounds, bricks_to_use, output=True)
 			csv_content += output_data
 
 		full_csv = csv_header + csv_content
-		print(full_csv)
+		#print(full_csv)
 
-		self.report({"INFO"}, "Experiments ran on {0} objects".format(len(context.selected_objects)))
+		filepath = bpy.data.filepath
+		directory = os.path.dirname(filepath)
+		output_name = os.path.join(directory, 'output.csv')
+
+		output_file = open(output_name, 'w')
+		output_file.write(full_csv)
+		output_file.close()
+
+		end = time.time()
+		timer = end - start
+
+		self.report({"INFO"}, "Experiments ran on {:d} objects in {:f} seconds".format(len(context.selected_objects), timer))
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
@@ -233,7 +246,7 @@ class experimentation(Operator):
 
 
 class brixelateFunctions():
-	def brixelate(self, scene, object_selected, use_shell_as_bounds, bricks_to_use):
+	def brixelate(self, scene, object_selected, use_shell_as_bounds, bricks_to_use, **kwargs):
 
 		lego = scene.lego_data
 
@@ -275,7 +288,7 @@ class brixelateFunctions():
 
 		lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use)
 		# print(lego_volume)
-		print(used_bricks_dict)
+		# print(used_bricks_dict)
 
 		# bm = self.bmesh_copy_from_object(object_selected, apply_modifiers=True)
 		bm = bmesh.new()
@@ -283,11 +296,7 @@ class brixelateFunctions():
 		bmesh.ops.triangulate(bm, faces=bm.faces)
 		object_volume = bm.calc_volume()
 
-		# print(object_volume)
-		# volume_difference = abs(object_volume - lego_volume)
 		volume_percent = (lego_volume / object_volume)
-
-		volume_string = "{:.2%}  LEGO -> Object Volume".format(volume_percent)
 
 		# TODO parent bricks to the selected object
 
@@ -296,21 +305,30 @@ class brixelateFunctions():
 		scene.my_settings.show_hide_model = True
 		scene.my_settings.show_hide_lego = True
 
-		# name, dimensions, vol, brick_count, bricks
-		name_string = object_selected.name + ','
-		dimensions_string = '{:f},{:f},{:f},'.format(object_selected.dimensions[0], object_selected.dimensions[1], object_selected.dimensions[2])
-		volume_string = '{:f},'.format(volume_percent)
-		brick_count_string = '{:d},'.format(brick_count)
+		if 'output' in kwargs:
+			if kwargs['output']:
+				# name, dimensions, object vol, lego vol, vol %, brick_count, bricks
+				name_string = object_selected.name + ','
+				bounded_string = str(use_shell_as_bounds) + ','
+				dimensions_string = '{:f},{:f},{:f},'.format(object_selected.dimensions[0], object_selected.dimensions[1],
+															 object_selected.dimensions[2])
+				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
+				brick_count_string = '{:d},'.format(brick_count)
 
-		# TODO sort dictionary ordering
-		bricks_used_string = ''
-		for i in used_bricks_dict.values():
-			string = str(i) + ','
-			bricks_used_string += string
+				# TODO sort dictionary ordering
+				sorted(used_bricks_dict)
+				bricks_used_string = ''
+				for i in used_bricks_dict.values():
+					string = str(i) + ','
+					bricks_used_string += string
 
-		output_data = name_string + dimensions_string + volume_string + brick_count_string + bricks_used_string + '\r\n'
+				output_data = name_string + bounded_string + dimensions_string + volume_string + brick_count_string + bricks_used_string + '\n'
 
-		return output_data
+				return output_data
+			else:
+				return None
+		else:
+			return None
 
 	def brickBounds(self, scene, object_selected):
 		lego = scene.lego_data
@@ -324,8 +342,6 @@ class brixelateFunctions():
 		x_dim = round(x_vec.length, 4)
 		y_dim = round(y_vec.length, 4)
 		z_dim = round(z_vec.length, 4)
-
-		# origin = object_selected.matrix_world.to_translation()
 
 		start_point = vertices[0] + (x_vec / 2) + (y_vec / 2) + (z_vec / 2)
 
@@ -342,12 +358,25 @@ class brixelateFunctions():
 
 		return xyz_brick, start_point
 
-	def brickPacking(self, scene, bricks_array, start_point, directional_list_of_bricks):
+	def brickPacking(self, scene, bricks_array, start_point, bricks_to_use):
 		start_time = time.time()
 		lego_data = scene.lego_data
 
 		bricks = bricks_array
 		opt_bricks = copy.copy(bricks_array) * -1.0
+
+		directional_list_of_bricks = []
+		for brick_name in bricks_to_use:
+			b0 = int(brick_name[0])
+			b1 = int(brick_name[2])
+			b2 = 1 if 'Plate' in brick_name else 3
+			brick = [b0, b1, b2]
+			directional_list_of_bricks.append(brick)
+			if brick[0] != brick[1]:
+				piece_alt_dir = [brick[1], brick[0], brick[2]]
+				directional_list_of_bricks.append(piece_alt_dir)
+
+		directional_list_of_bricks.sort(key=itemgetter(2, 1, 0), reverse=True)
 
 		w = lego_data.plate_w
 		d = lego_data.plate_d
@@ -361,7 +390,8 @@ class brixelateFunctions():
 
 		brick_num = 1
 		volume_count = 0
-		used_bricks = []
+		used_bricks_dict = copy.copy(bricks_to_use)
+
 		for z in range(z_array):
 			for y in range(y_array):
 				for x in range(x_array):
@@ -397,7 +427,9 @@ class brixelateFunctions():
 											break
 
 							if count == max_count:
-								used_bricks.append(lego_data.brickName(piece))
+
+								brick_name = lego_data.brickName(piece)
+								used_bricks_dict[brick_name] += 1
 
 								for p in p_list:
 									opt_bricks[p[0], p[1], p[2]] = brick_num
@@ -417,8 +449,6 @@ class brixelateFunctions():
 								volume_count += width * depth * height
 
 		lego_volume = volume_count * w * d * h
-
-		used_bricks_dict = Counter(used_bricks)
 
 		scene.my_settings.show_hide_lego = False
 		scene.my_settings.show_hide_optimised = True
@@ -612,7 +642,7 @@ class legoData():
 		object.data.materials.append(colour)
 		object.data.materials[0].diffuse_color = (random.uniform(0.2, 1), 0, 0)
 
-	def availableBricks(self):
+	def listOfBricksToUse(self):
 		settings = bpy.context.scene.my_settings
 		toUse = []
 		add = toUse.append
@@ -637,21 +667,11 @@ class legoData():
 			if p:
 				add(self.list_of_1plates[j])
 
-		toUse_ = np.array(toUse)
-		return toUse
+		brick_names_dict = {}
+		for brick in toUse:
+			brick_names_dict[self.brickName(brick)] = 0
 
-	def listOfBricksToUse(self):
-		list_of_bricks = self.availableBricks()
-		directional_list_of_bricks = []
-		brick_names = []
-
-		for brick in list_of_bricks:
-			directional_list_of_bricks.append(brick)
-			brick_names.append(self.brickName(brick))
-			if brick[0] != brick[1]:
-				piece_alt_dir = [brick[1], brick[0], brick[2]]
-				directional_list_of_bricks.append(piece_alt_dir)
-		return directional_list_of_bricks, brick_names
+		return brick_names_dict
 
 
 class meshCheck():

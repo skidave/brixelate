@@ -217,26 +217,27 @@ class experimentation(Operator):
 		use_shell_as_bounds = context.scene.my_settings.use_shell_as_bounds
 		bricks_to_use = context.scene.lego_data.listOfBricksToUse()
 
+		filepath = bpy.data.filepath
+		directory = os.path.dirname(filepath)
+		output_name = os.path.join(directory, 'output.csv')
+		output_file = open(output_name, 'w')
+
 		brick_string = ''
 		for name in bricks_to_use:
 			brick_string = brick_string + name + ','
 
 		csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + '\n'
+		output_file.write(csv_header)
 
-		csv_content = ''
+
 		for obj in context.selected_objects:
+			csv_content = ''
 			output_data = Brixelate.brixelate(context.scene, obj, use_shell_as_bounds, bricks_to_use, output=True)
-			csv_content += output_data
+			csv_content = output_data
+			output_file.write(csv_content)
 
-		full_csv = csv_header + csv_content
+		#full_csv = csv_header + csv_content
 		# print(full_csv)
-
-		filepath = bpy.data.filepath
-		directory = os.path.dirname(filepath)
-		output_name = os.path.join(directory, 'output.csv')
-
-		output_file = open(output_name, 'w')
-		output_file.write(full_csv)
 		output_file.close()
 
 		end = time.time()

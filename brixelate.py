@@ -130,7 +130,14 @@ class BrixelPanel(Panel):
 		layout.separator()
 		box = layout.box()
 		box.label("Experiments", icon="FCURVE")
-		box.operator("tool.brixelate_experiments", text="Run", icon="FILE_TICK")
+		row = box.row()
+		row.operator("tool.multiply_object", text="Multiply", icon="MOD_ARRAY")
+		row.prop(settings, "max_range")
+		row.prop(settings, "scale_factor")
+		row = box.row()
+		row.operator("tool.select_all", text="Select All", icon="HAND")
+		row.operator("tool.deselect_all", text="Deselect All", icon="X")
+		box.operator("tool.brixelate_experiments", text="Run on Selected", icon="FILE_TICK")
 
 		layout.separator()
 		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
@@ -222,7 +229,7 @@ class experimentation(Operator):
 			csv_content += output_data
 
 		full_csv = csv_header + csv_content
-		#print(full_csv)
+		# print(full_csv)
 
 		filepath = bpy.data.filepath
 		directory = os.path.dirname(filepath)
@@ -235,7 +242,8 @@ class experimentation(Operator):
 		end = time.time()
 		timer = end - start
 
-		self.report({"INFO"}, "Experiments ran on {:d} objects in {:f} seconds".format(len(context.selected_objects), timer))
+		self.report({"INFO"},
+					"Experiments ran on {:d} objects in {:f} seconds".format(len(context.selected_objects), timer))
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
@@ -243,6 +251,154 @@ class experimentation(Operator):
 
 
 # end simpleBrixelate
+
+class multiplyObjects(Operator):
+	'''Multiplies currently selected object'''
+	bl_idname = "tool.multiply_object"
+	bl_label = "Multiply Objects"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if len(context.selected_objects) == 1 and context.object.type == 'MESH':
+			return True
+
+	def execute(self, context):
+		scene = context.scene
+		object_selected = context.selected_objects[0]
+		max_range = scene.my_settings.max_range
+		end_scale = scene.my_settings.scale_factor
+
+		original = bpy.data.objects[object_selected.name]
+
+		base_name = object_selected.name
+		object_selected.name += ' {:.2f}mm'.format(max(object_selected.dimensions))
+
+		location = original.matrix_world.to_translation()
+
+		if max_range > 1:
+			copies = []
+			prev_pos = location
+			count = 0
+			for num in range(max_range - 1):
+				interp_scale = ((num + 1) / (max_range - 1)) * (end_scale - 1) + 1
+
+				copy = original.copy()
+				copy.scale = [interp_scale, interp_scale, interp_scale]
+
+				dist = object_selected.dimensions[0] * interp_scale + 5
+
+				dist_travelled = (prev_pos-location).length
+				if num > 5 and dist_travelled % 250 < 50:
+					count += 1
+					offset = object_selected.dimensions[1] * interp_scale + 10
+					prev_pos = Vector((0,offset*count,0)) + location
+
+				translation = Vector((dist, 0, 0)) + prev_pos
+				copy.location = translation
+
+				copy.data = copy.data.copy()  # also duplicate mesh, remove for linked duplicate
+				size = max(object_selected.dimensions)*interp_scale
+				size_string = ' {:.2f}mm'.format(size)
+				copy.name = base_name + size_string
+				copies.append(copy)
+
+				prev_pos = translation
+
+			for copy in copies:
+				scene.objects.link(copy)
+
+
+		self.report({"INFO"}, "Multiplying finished")
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
+class resetBrixelate(Operator):
+	'''Removes all LEGO bricks'''
+	bl_idname = "tool.reset_brixelate"
+	bl_label = "Reset Brixelate"
+
+	@classmethod
+	def poll(self, context):
+		scene = context.scene
+		if len(scene.objects) > 0:
+			return True
+
+	def execute(self, context):
+		start_time = time.time()
+		scene = context.scene
+
+		objs = bpy.data.objects
+		for ob in scene.objects:
+			ob.hide = False
+			if ob.name.startswith('Brick '):
+				objs.remove(ob, True)
+
+		scene.my_settings.show_hide_model = True
+		scene.my_settings.show_hide_lego = True
+		scene.lego_data.brick_count = 0
+
+		end_time = time.time()
+		self.report({"INFO"}, "Reset finished in %5.3f seconds" % (end_time - start_time))
+
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
+class selectAllObjects(Operator):
+	'''Selects all Non-Brick Objects'''
+	bl_idname = "tool.select_all"
+	bl_label = "Select All Objects"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		scene = context.scene
+		if len(scene.objects) > 1:
+			return True
+
+	def execute(self, context):
+		scene = context.scene
+		for ob in scene.objects:
+			if ob.name.startswith('Brick '):
+				ob.select = False
+			else:
+				ob.select = True
+
+		self.report({"INFO"}, "All objects selected")
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
+class deselectAllObjects(Operator):
+	'''Deselects all Objects'''
+	bl_idname = "tool.deselect_all"
+	bl_label = "Deselect All Objects"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		scene = context.scene
+		if len(scene.objects) > 1:
+			return True
+
+	def execute(self, context):
+		scene = context.scene
+		for ob in scene.objects:
+			ob.select = False
+
+		self.report({"INFO"}, "All objects deselected")
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
 
 
 class brixelateFunctions():
@@ -310,7 +466,8 @@ class brixelateFunctions():
 				# name, dimensions, object vol, lego vol, vol %, brick_count, bricks
 				name_string = object_selected.name + ','
 				bounded_string = str(use_shell_as_bounds) + ','
-				dimensions_string = '{:f},{:f},{:f},'.format(object_selected.dimensions[0], object_selected.dimensions[1],
+				dimensions_string = '{:f},{:f},{:f},'.format(object_selected.dimensions[0],
+															 object_selected.dimensions[1],
 															 object_selected.dimensions[2])
 				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
 				brick_count_string = '{:d},'.format(brick_count)
@@ -493,42 +650,6 @@ class brixelateFunctions():
 
 		return bm
 
-
-class resetBrixelate(Operator):
-	'''Removes all LEGO bricks'''
-	bl_idname = "tool.reset_brixelate"
-	bl_label = "Reset Brixelate"
-
-	@classmethod
-	def poll(self, context):
-		scene = context.scene
-		if len(scene.objects) > 0:
-			return True
-
-	def execute(self, context):
-		start_time = time.time()
-		scene = context.scene
-
-		objs = bpy.data.objects
-		for ob in scene.objects:
-			ob.hide = False
-			if ob.name.startswith('Brick '):
-				objs.remove(ob, True)
-
-		scene.my_settings.show_hide_model = True
-		scene.my_settings.show_hide_lego = True
-		scene.lego_data.brick_count = 0
-
-		end_time = time.time()
-		self.report({"INFO"}, "Reset finished in %5.3f seconds" % (end_time - start_time))
-
-		return {'FINISHED'}
-
-	def invoke(self, context, event):
-		return self.execute(context)
-
-
-# end Reset
 
 class legoData():
 	# 1x1 LEGO plate dimensions
@@ -906,8 +1027,28 @@ class MySettings(PropertyGroup):
 								 default=(True, True, True, True, True, True))  # 1x1,2,3,4,6,8
 	bricks2 = BoolVectorProperty(name="2xN Bricks", size=5, default=(True, True, True, True, True))  # 2x2,3,4,6,8
 
+	max_range = IntProperty(
+		name='Num',
+		description='Number of object repetitions',
+		default=1,
+		min=1,
+		max=100
+	)
 
-classes = (simpleBrixelate, resetBrixelate, experimentation, BrixelPanel, MySettings)
+	scale_factor = FloatProperty(
+		name='Scale',
+		description='Maximum scale factor for object repetition',
+		default=1,
+		min=1,
+		max=50
+
+	)
+
+
+classes = (
+	simpleBrixelate, resetBrixelate, experimentation, multiplyObjects, selectAllObjects, deselectAllObjects,
+	BrixelPanel,
+	MySettings)
 
 
 def register():

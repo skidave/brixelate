@@ -34,6 +34,7 @@ from mathutils import Vector
 import numpy as np
 import random
 import time
+import datetime
 import copy
 import os
 from operator import itemgetter
@@ -207,11 +208,14 @@ class experimentation(Operator):
 
 	@classmethod
 	def poll(self, context):
-		if len(context.selected_objects) > 0 and context.object.type == 'MESH':
+		if len(context.selected_objects) is not None and context.object.type == 'MESH':
 			return True
 
 	def execute(self, context):
 		start = time.time()
+		now = datetime.datetime.now()
+		start_string = "Experiment started: {:%H:%M:%S}".format(now)
+		print(start_string)
 		Brixelate = context.scene.Brixelate
 
 		use_shell_as_bounds = context.scene.my_settings.use_shell_as_bounds
@@ -229,12 +233,15 @@ class experimentation(Operator):
 		csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + '\n'
 		output_file.write(csv_header)
 
-
+		count = 1
 		for obj in context.selected_objects:
+			progress_string = "Running on {:d} of {:d} objects".format(count, len(context.selected_objects))
+			print(progress_string)
 			csv_content = ''
 			output_data = Brixelate.brixelate(context.scene, obj, use_shell_as_bounds, bricks_to_use, output=True)
 			csv_content = output_data
 			output_file.write(csv_content)
+			count +=1
 
 		#full_csv = csv_header + csv_content
 		# print(full_csv)

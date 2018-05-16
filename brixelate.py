@@ -223,7 +223,7 @@ class experimentation(Operator):
 
 		filepath = bpy.data.filepath
 		directory = os.path.dirname(filepath)
-		output_name = os.path.join(directory, 'output.csv')
+		output_name = os.path.join(directory, 'output_{:%Y-%m-%d--%H-%M-%S}.csv'.format(now))
 		output_file = open(output_name, 'w')
 
 		brick_string = ''

@@ -208,9 +208,8 @@ class experimentation(Operator):
 
 	@classmethod
 	def poll(self, context):
-		if len(context.selected_objects) is not None:
-			if context.object.type == 'MESH':
-				return True
+		if len(context.selected_objects) == 1 and context.selected_objects[0].type == 'MESH':
+			return True
 
 	def execute(self, context):
 		start = time.time()
@@ -252,18 +251,11 @@ class experimentation(Operator):
 		count = 1
 		total = len(scales)
 		for scale in scales:
-			print(scale)
 			new_dims = base_dims * scale
-
-			print(new_dims)
 			object_selected.dimensions = new_dims
-
-			print(object_selected.dimensions)
 
 			size_string = ' {:.2f}mm'.format(max(new_dims))
 			object_selected.name = base_name + size_string
-
-			print(object_selected.name)
 
 			progress_string = "Running on {:d} of {:d} objects".format(count, total)
 			print(progress_string)

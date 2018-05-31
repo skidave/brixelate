@@ -232,20 +232,23 @@ class experimentation(Operator):
 
 		csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + '\n'
 		output_file.write(csv_header)
+		output_file.close()
 
 		count = 1
 		for obj in context.selected_objects:
+			output_file = open(output_name, 'a')
 			progress_string = "Running on {:d} of {:d} objects".format(count, len(context.selected_objects))
 			print(progress_string)
 			csv_content = ''
 			output_data = Brixelate.brixelate(context.scene, obj, use_shell_as_bounds, bricks_to_use, output=True)
 			csv_content = output_data
 			output_file.write(csv_content)
+			output_file.close()
 			count +=1
 
 		#full_csv = csv_header + csv_content
 		# print(full_csv)
-		output_file.close()
+
 
 		end = time.time()
 		timer = end - start

@@ -132,18 +132,18 @@ class BrixelPanel(Panel):
 		box = layout.box()
 		box.label("Experiments", icon="FCURVE")
 		row = box.row()
-		row.operator("tool.multiply_object", text="Multiply", icon="MOD_ARRAY")
 		row.prop(settings, "max_range")
 		row.prop(settings, "scale_factor")
-		row = box.row()
-		row.operator("tool.select_all", text="Select All", icon="HAND")
-		row.operator("tool.deselect_all", text="Deselect All", icon="X")
-		box.operator("tool.brixelate_experiments", text="Run on Selected", icon="FILE_TICK")
+		# row = box.row()
+		# row.operator("tool.select_all", text="Select All", icon="HAND")
+		# row.operator("tool.deselect_all", text="Deselect All", icon="X")
+		box.operator("tool.brixelate_experiments", text="Run Experiments", icon="FILE_TICK")
 
 		layout.separator()
 		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
 
 		if len(scene.objects) > 0:
+
 			layout.separator()
 			col = layout.column(align=True)
 			box = col.box()
@@ -152,11 +152,11 @@ class BrixelPanel(Panel):
 			row.label(text="Object", icon="VIEW3D")
 			row.prop(settings, "show_hide_model", text=("Visible" if settings.show_hide_model else "Hidden"),
 					 toggle=True)
-		if brick_count > 0:
-			row = box.row()
-			row.label(text="LEGO", icon="GROUP_VERTEX")
-			row.prop(settings, "show_hide_lego", text=("Visible" if settings.show_hide_lego else "Hidden"),
-					 toggle=True)
+			if brick_count > 0:
+				row = box.row()
+				row.label(text="LEGO", icon="GROUP_VERTEX")
+				row.prop(settings, "show_hide_lego", text=("Visible" if settings.show_hide_lego else "Hidden"),
+						 toggle=True)
 
 		if brick_count > 0:
 			layout.separator()
@@ -208,8 +208,9 @@ class experimentation(Operator):
 
 	@classmethod
 	def poll(self, context):
-		if len(context.selected_objects) is not None and context.object.type == 'MESH':
-			return True
+		if len(context.selected_objects) is not None:
+			if context.object.type == 'MESH':
+				return True
 
 	def execute(self, context):
 		start = time.time()
@@ -235,26 +236,51 @@ class experimentation(Operator):
 		output_file.close()
 
 		count = 1
-		for obj in context.selected_objects:
-			output_file = open(output_name, 'a')
-			progress_string = "Running on {:d} of {:d} objects".format(count, len(context.selected_objects))
+
+		max_range = context.scene.my_settings.max_range
+		end_scale = context.scene.my_settings.scale_factor
+
+		scales = [1]
+		for num in range(max_range - 1):
+			interp_scale = ((num + 1) / (max_range - 1)) * (end_scale - 1) + 1
+			scales.append(interp_scale)
+
+		object_selected = context.selected_objects[0]
+		base_name = copy.copy(object_selected.name)
+		base_dims = copy.copy(object_selected.dimensions)
+
+		count = 1
+		total = len(scales)
+		for scale in scales:
+			print(scale)
+			new_dims = base_dims * scale
+
+			print(new_dims)
+			object_selected.dimensions = new_dims
+
+			print(object_selected.dimensions)
+
+			size_string = ' {:.2f}mm'.format(max(new_dims))
+			object_selected.name = base_name + size_string
+
+			print(object_selected.name)
+
+			progress_string = "Running on {:d} of {:d} objects".format(count, total)
 			print(progress_string)
-			csv_content = ''
-			output_data = Brixelate.brixelate(context.scene, obj, use_shell_as_bounds, bricks_to_use, output=True)
-			csv_content = output_data
-			output_file.write(csv_content)
+
+			output_data = Brixelate.brixelate(context.scene, object_selected, use_shell_as_bounds, bricks_to_use,
+											  output=True)
+			output_file = open(output_name, 'a')
+			output_file.write(output_data)
 			output_file.close()
-			count +=1
 
-		#full_csv = csv_header + csv_content
-		# print(full_csv)
-
+			count += 1
 
 		end = time.time()
 		timer = end - start
 
 		self.report({"INFO"},
-					"Experiments ran on {:d} objects in {:f} seconds".format(len(context.selected_objects), timer))
+					"Experiment run on {:d} objects in {:f} seconds".format(total, timer))
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
@@ -299,17 +325,17 @@ class multiplyObjects(Operator):
 
 				dist = object_selected.dimensions[0] * interp_scale + 5
 
-				dist_travelled = (prev_pos-location).length
+				dist_travelled = (prev_pos - location).length
 				if num > 5 and dist_travelled % 250 < 50:
 					count += 1
 					offset = object_selected.dimensions[1] * interp_scale + 10
-					prev_pos = Vector((0,offset*count,0)) + location
+					prev_pos = Vector((0, offset * count, 0)) + location
 
 				translation = Vector((dist, 0, 0)) + prev_pos
 				copy.location = translation
 
 				copy.data = copy.data.copy()  # also duplicate mesh, remove for linked duplicate
-				size = max(object_selected.dimensions)*interp_scale
+				size = max(object_selected.dimensions) * interp_scale
 				size_string = ' {:.2f}mm'.format(size)
 				copy.name = base_name + size_string
 				copies.append(copy)
@@ -318,7 +344,6 @@ class multiplyObjects(Operator):
 
 			for copy in copies:
 				scene.objects.link(copy)
-
 
 		self.report({"INFO"}, "Multiplying finished")
 		return {'FINISHED'}
@@ -453,7 +478,14 @@ class brixelateFunctions():
 		end_time = time.time()
 		testing_time = (end_time - start_time)
 
-		lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use)
+		if 'output' in kwargs:
+			if kwargs['output']:
+				add_bricks = False
+			else:
+				add_bricks = True
+
+		lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use,
+																	   add_bricks=add_bricks)
 		# print(lego_volume)
 		# print(used_bricks_dict)
 
@@ -526,7 +558,7 @@ class brixelateFunctions():
 
 		return xyz_brick, start_point
 
-	def brickPacking(self, scene, bricks_array, start_point, bricks_to_use):
+	def brickPacking(self, scene, bricks_array, start_point, bricks_to_use, **kwargs):
 		start_time = time.time()
 		lego_data = scene.lego_data
 
@@ -612,7 +644,9 @@ class brixelateFunctions():
 								translation = Vector(
 									((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
 								translation += Vector((x_pos, y_pos, z_pos))
-								addNewBrickAtPoint(translation, width, depth, height, brick_num)
+								if 'add_bricks' in kwargs:
+									if kwargs['add_bricks']:
+										addNewBrickAtPoint(translation, width, depth, height, brick_num)
 								brick_num += 1
 								volume_count += width * depth * height
 

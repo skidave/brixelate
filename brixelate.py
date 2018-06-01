@@ -234,8 +234,6 @@ class experimentation(Operator):
 		output_file.write(csv_header)
 		output_file.close()
 
-		count = 1
-
 		max_range = context.scene.my_settings.max_range
 		end_scale = context.scene.my_settings.scale_factor
 
@@ -370,59 +368,8 @@ class resetBrixelate(Operator):
 		scene.lego_data.brick_count = 0
 
 		end_time = time.time()
-		self.report({"INFO"}, "Reset finished in %5.3f seconds" % (end_time - start_time))
+		self.report({"INFO"}, "Reset finished in {:5.3f} seconds".format(end_time - start_time))
 
-		return {'FINISHED'}
-
-	def invoke(self, context, event):
-		return self.execute(context)
-
-
-class selectAllObjects(Operator):
-	'''Selects all Non-Brick Objects'''
-	bl_idname = "tool.select_all"
-	bl_label = "Select All Objects"
-	bl_options = {"UNDO"}
-
-	@classmethod
-	def poll(self, context):
-		scene = context.scene
-		if len(scene.objects) > 1:
-			return True
-
-	def execute(self, context):
-		scene = context.scene
-		for ob in scene.objects:
-			if ob.name.startswith('Brick '):
-				ob.select = False
-			else:
-				ob.select = True
-
-		self.report({"INFO"}, "All objects selected")
-		return {'FINISHED'}
-
-	def invoke(self, context, event):
-		return self.execute(context)
-
-
-class deselectAllObjects(Operator):
-	'''Deselects all Objects'''
-	bl_idname = "tool.deselect_all"
-	bl_label = "Deselect All Objects"
-	bl_options = {"UNDO"}
-
-	@classmethod
-	def poll(self, context):
-		scene = context.scene
-		if len(scene.objects) > 1:
-			return True
-
-	def execute(self, context):
-		scene = context.scene
-		for ob in scene.objects:
-			ob.select = False
-
-		self.report({"INFO"}, "All objects deselected")
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
@@ -473,8 +420,9 @@ class brixelateFunctions():
 		if 'output' in kwargs:
 			if kwargs['output']:
 				add_bricks = False
-			else:
-				add_bricks = True
+		else:
+			add_bricks = True
+
 
 		lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use,
 																	   add_bricks=add_bricks)
@@ -501,13 +449,12 @@ class brixelateFunctions():
 				# name, dimensions, object vol, lego vol, vol %, brick_count, bricks
 				name_string = object_selected.name + ','
 				bounded_string = str(use_shell_as_bounds) + ','
-				dimensions_string = '{:f},{:f},{:f},'.format(object_selected.dimensions[0],
+				dimensions_string = '{:.3f},{:.3f},{:.3f},'.format(object_selected.dimensions[0],
 															 object_selected.dimensions[1],
 															 object_selected.dimensions[2])
 				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
 				brick_count_string = '{:d},'.format(brick_count)
 
-				# TODO sort dictionary ordering
 				sorted(used_bricks_dict)
 				bricks_used_string = ''
 				for i in used_bricks_dict.values():
@@ -1083,7 +1030,7 @@ class MySettings(PropertyGroup):
 
 
 classes = (
-	simpleBrixelate, resetBrixelate, experimentation, multiplyObjects, selectAllObjects, deselectAllObjects,
+	simpleBrixelate, resetBrixelate, experimentation, multiplyObjects,
 	BrixelPanel,
 	MySettings)
 

@@ -34,8 +34,10 @@ from mathutils import Vector
 import numpy as np
 import random
 import time
+import datetime
 import copy
-from collections import Counter
+import os
+from operator import itemgetter
 
 
 class BrixelPanel(Panel):
@@ -126,7 +128,22 @@ class BrixelPanel(Panel):
 		row = box.row()
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
 
+		layout.separator()
+		box = layout.box()
+		box.label("Experiments", icon="FCURVE")
+		row = box.row()
+		row.prop(settings, "max_range")
+		row.prop(settings, "scale_factor")
+		# row = box.row()
+		# row.operator("tool.select_all", text="Select All", icon="HAND")
+		# row.operator("tool.deselect_all", text="Deselect All", icon="X")
+		box.operator("tool.brixelate_experiments", text="Run Experiments", icon="FILE_TICK")
+
+		layout.separator()
+		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
+
 		if len(scene.objects) > 0:
+
 			layout.separator()
 			col = layout.column(align=True)
 			box = col.box()
@@ -135,14 +152,11 @@ class BrixelPanel(Panel):
 			row.label(text="Object", icon="VIEW3D")
 			row.prop(settings, "show_hide_model", text=("Visible" if settings.show_hide_model else "Hidden"),
 					 toggle=True)
-		if brick_count > 0:
-			row = box.row()
-			row.label(text="LEGO", icon="GROUP_VERTEX")
-			row.prop(settings, "show_hide_lego", text=("Visible" if settings.show_hide_lego else "Hidden"),
-					 toggle=True)
-
-		layout.separator()
-		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
+			if brick_count > 0:
+				row = box.row()
+				row.label(text="LEGO", icon="GROUP_VERTEX")
+				row.prop(settings, "show_hide_lego", text=("Visible" if settings.show_hide_lego else "Hidden"),
+						 toggle=True)
 
 		if brick_count > 0:
 			layout.separator()
@@ -166,6 +180,7 @@ class simpleBrixelate(Operator):
 
 	@classmethod
 	def poll(self, context):
+		# TODO prevent running if no bricks selected
 		if len(context.selected_objects) == 1 and context.object.type == 'MESH':
 			return True
 
@@ -173,7 +188,7 @@ class simpleBrixelate(Operator):
 		Brixelate = context.scene.Brixelate
 		object_selected = context.selected_objects[0]
 		use_shell_as_bounds = context.scene.my_settings.use_shell_as_bounds
-		bricks_to_use, _ = context.scene.lego_data.listOfBricksToUse()
+		bricks_to_use = context.scene.lego_data.listOfBricksToUse()
 
 		Brixelate.brixelate(context.scene, object_selected, use_shell_as_bounds, bricks_to_use)
 		self.report({"INFO"}, "Brixelate finished")
@@ -185,8 +200,117 @@ class simpleBrixelate(Operator):
 
 # end simpleBrixelate
 
+class experimentation(Operator):
+	'''Tests Brixelation of All Selected Objects in the Scene'''
+	bl_idname = "tool.brixelate_experiments"
+	bl_label = "Brixelate Experimentation"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if len(context.selected_objects) == 1 and context.selected_objects[0].type == 'MESH':
+			return True
+
+	def execute(self, context):
+		start = time.time()
+		now = datetime.datetime.now()
+		start_string = "Experiment started: {:%H:%M:%S}".format(now)
+		print(start_string)
+		Brixelate = context.scene.Brixelate
+
+		use_shell_as_bounds = context.scene.my_settings.use_shell_as_bounds
+		bricks_to_use = context.scene.lego_data.listOfBricksToUse()
+
+		filepath = bpy.data.filepath
+		directory = os.path.dirname(filepath)
+		output_name = os.path.join(directory, 'output_{:%Y-%m-%d--%H-%M-%S}.csv'.format(now))
+		output_file = open(output_name, 'w')
+
+		brick_string = ''
+		for name in bricks_to_use:
+			brick_string = brick_string + name + ','
+
+		csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + '\n'
+		output_file.write(csv_header)
+		output_file.close()
+
+		max_range = context.scene.my_settings.max_range
+		end_scale = context.scene.my_settings.scale_factor
+
+		scales = [1]
+		for num in range(max_range - 1):
+			interp_scale = ((num + 1) / (max_range - 1)) * (end_scale - 1) + 1
+			scales.append(interp_scale)
+
+		object_selected = context.selected_objects[0]
+		base_dims = copy.copy(object_selected.dimensions)
+
+		count = 1
+		total = len(scales)
+		for scale in scales:
+			new_dims = base_dims * scale
+			object_selected.dimensions = new_dims
+
+			progress_string = "Running on {:d} of {:d} objects".format(count, total)
+			print(progress_string)
+
+			output_data = Brixelate.brixelate(context.scene, object_selected, use_shell_as_bounds, bricks_to_use,
+											  output=True)
+			output_file = open(output_name, 'a')
+			output_file.write(output_data)
+			output_file.close()
+
+			count += 1
+
+		end = time.time()
+		timer = end - start
+
+		self.report({"INFO"},
+					"Experiment run on {:d} objects in {:f} seconds".format(total, timer))
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
+# end simpleBrixelate
+
+class resetBrixelate(Operator):
+	'''Removes all LEGO bricks'''
+	bl_idname = "tool.reset_brixelate"
+	bl_label = "Reset Brixelate"
+
+	@classmethod
+	def poll(self, context):
+		scene = context.scene
+		if len(scene.objects) > 0:
+			return True
+
+	def execute(self, context):
+		start_time = time.time()
+		scene = context.scene
+
+		objs = bpy.data.objects
+		for ob in scene.objects:
+			ob.hide = False
+			if ob.name.startswith('Brick '):
+				objs.remove(ob, True)
+
+		scene.my_settings.show_hide_model = True
+		scene.my_settings.show_hide_lego = True
+		scene.lego_data.brick_count = 0
+
+		end_time = time.time()
+		self.report({"INFO"}, "Reset finished in {:5.3f} seconds".format(end_time - start_time))
+
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
 class brixelateFunctions():
-	def brixelate(self, scene, object_selected, use_shell_as_bounds, bricks_to_use):
+	def brixelate(self, scene, object_selected, use_shell_as_bounds, bricks_to_use, **kwargs):
 
 		lego = scene.lego_data
 
@@ -226,9 +350,17 @@ class brixelateFunctions():
 		end_time = time.time()
 		testing_time = (end_time - start_time)
 
-		lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use)
+		if 'output' in kwargs:
+			if kwargs['output']:
+				add_bricks = False
+		else:
+			add_bricks = True
+
+
+		lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use,
+																	   add_bricks=add_bricks)
 		# print(lego_volume)
-		print(used_bricks_dict)
+		# print(used_bricks_dict)
 
 		# bm = self.bmesh_copy_from_object(object_selected, apply_modifiers=True)
 		bm = bmesh.new()
@@ -236,11 +368,7 @@ class brixelateFunctions():
 		bmesh.ops.triangulate(bm, faces=bm.faces)
 		object_volume = bm.calc_volume()
 
-		# print(object_volume)
-		# volume_difference = abs(object_volume - lego_volume)
 		volume_percent = (lego_volume / object_volume)
-
-		volume_string = "{:.2%}  LEGO -> Object Volume".format(volume_percent)
 
 		# TODO parent bricks to the selected object
 
@@ -249,10 +377,30 @@ class brixelateFunctions():
 		scene.my_settings.show_hide_model = True
 		scene.my_settings.show_hide_lego = True
 
-		#name, vol, brick_count,
-		# output_data =
+		if 'output' in kwargs:
+			if kwargs['output']:
+				# name, dimensions, object vol, lego vol, vol %, brick_count, bricks
+				name_string = object_selected.name + ','
+				bounded_string = str(int(use_shell_as_bounds)) + ','
+				dimensions_string = '{:.3f},{:.3f},{:.3f},'.format(object_selected.dimensions[0],
+															 object_selected.dimensions[1],
+															 object_selected.dimensions[2])
+				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
+				brick_count_string = '{:d},'.format(brick_count)
 
-		return None
+				sorted(used_bricks_dict)
+				bricks_used_string = ''
+				for i in used_bricks_dict.values():
+					string = str(i) + ','
+					bricks_used_string += string
+
+				output_data = name_string + bounded_string + dimensions_string + volume_string + brick_count_string + bricks_used_string + '\n'
+
+				return output_data
+			else:
+				return None
+		else:
+			return None
 
 	def brickBounds(self, scene, object_selected):
 		lego = scene.lego_data
@@ -266,8 +414,6 @@ class brixelateFunctions():
 		x_dim = round(x_vec.length, 4)
 		y_dim = round(y_vec.length, 4)
 		z_dim = round(z_vec.length, 4)
-
-		# origin = object_selected.matrix_world.to_translation()
 
 		start_point = vertices[0] + (x_vec / 2) + (y_vec / 2) + (z_vec / 2)
 
@@ -284,12 +430,25 @@ class brixelateFunctions():
 
 		return xyz_brick, start_point
 
-	def brickPacking(self, scene, bricks_array, start_point, directional_list_of_bricks):
+	def brickPacking(self, scene, bricks_array, start_point, bricks_to_use, **kwargs):
 		start_time = time.time()
 		lego_data = scene.lego_data
 
 		bricks = bricks_array
 		opt_bricks = copy.copy(bricks_array) * -1.0
+
+		directional_list_of_bricks = []
+		for brick_name in bricks_to_use:
+			b0 = int(brick_name[1])
+			b1 = int(brick_name[3])
+			b2 = 1 if 'Plate' in brick_name else 3
+			brick = [b0, b1, b2]
+			directional_list_of_bricks.append(brick)
+			if brick[0] != brick[1]:
+				piece_alt_dir = [brick[1], brick[0], brick[2]]
+				directional_list_of_bricks.append(piece_alt_dir)
+
+		directional_list_of_bricks.sort(key=itemgetter(2, 1, 0), reverse=True)
 
 		w = lego_data.plate_w
 		d = lego_data.plate_d
@@ -303,7 +462,8 @@ class brixelateFunctions():
 
 		brick_num = 1
 		volume_count = 0
-		used_bricks = []
+		used_bricks_dict = copy.copy(bricks_to_use)
+
 		for z in range(z_array):
 			for y in range(y_array):
 				for x in range(x_array):
@@ -339,7 +499,9 @@ class brixelateFunctions():
 											break
 
 							if count == max_count:
-								used_bricks.append(lego_data.brickName(piece))
+
+								brick_name = lego_data.brickName(piece)
+								used_bricks_dict[brick_name] += 1
 
 								for p in p_list:
 									opt_bricks[p[0], p[1], p[2]] = brick_num
@@ -354,13 +516,13 @@ class brixelateFunctions():
 								translation = Vector(
 									((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
 								translation += Vector((x_pos, y_pos, z_pos))
-								addNewBrickAtPoint(translation, width, depth, height, brick_num)
+								if 'add_bricks' in kwargs:
+									if kwargs['add_bricks']:
+										addNewBrickAtPoint(translation, width, depth, height, brick_num)
 								brick_num += 1
 								volume_count += width * depth * height
 
 		lego_volume = volume_count * w * d * h
-
-		used_bricks_dict = Counter(used_bricks)
 
 		scene.my_settings.show_hide_lego = False
 		scene.my_settings.show_hide_optimised = True
@@ -405,42 +567,6 @@ class brixelateFunctions():
 
 		return bm
 
-
-class resetBrixelate(Operator):
-	'''Removes all LEGO bricks'''
-	bl_idname = "tool.reset_brixelate"
-	bl_label = "Reset Brixelate"
-
-	@classmethod
-	def poll(self, context):
-		scene = context.scene
-		if len(scene.objects) > 0:
-			return True
-
-	def execute(self, context):
-		start_time = time.time()
-		scene = context.scene
-
-		objs = bpy.data.objects
-		for ob in scene.objects:
-			ob.hide = False
-			if ob.name.startswith('Brick '):
-				objs.remove(ob, True)
-
-		scene.my_settings.show_hide_model = True
-		scene.my_settings.show_hide_lego = True
-		scene.lego_data.brick_count = 0
-
-		end_time = time.time()
-		self.report({"INFO"}, "Reset finished in %5.3f seconds" % (end_time - start_time))
-
-		return {'FINISHED'}
-
-	def invoke(self, context, event):
-		return self.execute(context)
-
-
-# end Reset
 
 class legoData():
 	# 1x1 LEGO plate dimensions
@@ -501,7 +627,7 @@ class legoData():
 			first = brick[1]
 			second = brick[0]
 
-		name = '{0}x{1} {2}'.format(first, second, type)
+		name = '_{0}x{1}_{2}'.format(first, second, type)
 
 		return name
 
@@ -554,7 +680,7 @@ class legoData():
 		object.data.materials.append(colour)
 		object.data.materials[0].diffuse_color = (random.uniform(0.2, 1), 0, 0)
 
-	def availableBricks(self):
+	def listOfBricksToUse(self):
 		settings = bpy.context.scene.my_settings
 		toUse = []
 		add = toUse.append
@@ -579,21 +705,11 @@ class legoData():
 			if p:
 				add(self.list_of_1plates[j])
 
-		toUse_ = np.array(toUse)
-		return toUse
+		brick_names_dict = {}
+		for brick in toUse:
+			brick_names_dict[self.brickName(brick)] = 0
 
-	def listOfBricksToUse(self):
-		list_of_bricks = self.availableBricks()
-		directional_list_of_bricks = []
-		brick_names = []
-
-		for brick in list_of_bricks:
-			directional_list_of_bricks.append(brick)
-			brick_names.append(self.brickName(brick))
-			if brick[0] != brick[1]:
-				piece_alt_dir = [brick[1], brick[0], brick[2]]
-				directional_list_of_bricks.append(piece_alt_dir)
-		return directional_list_of_bricks, brick_names
+		return brick_names_dict
 
 
 class meshCheck():
@@ -828,8 +944,28 @@ class MySettings(PropertyGroup):
 								 default=(True, True, True, True, True, True))  # 1x1,2,3,4,6,8
 	bricks2 = BoolVectorProperty(name="2xN Bricks", size=5, default=(True, True, True, True, True))  # 2x2,3,4,6,8
 
+	max_range = IntProperty(
+		name='Num',
+		description='Number of object repetitions',
+		default=1,
+		min=1,
+		max=100
+	)
 
-classes = (simpleBrixelate, resetBrixelate, BrixelPanel, MySettings)
+	scale_factor = FloatProperty(
+		name='Scale',
+		description='Maximum scale factor for object repetition',
+		default=1,
+		min=1,
+		max=50
+
+	)
+
+
+classes = (
+	simpleBrixelate, resetBrixelate, experimentation,
+	BrixelPanel,
+	MySettings)
 
 
 def register():

@@ -243,7 +243,6 @@ class experimentation(Operator):
 			scales.append(interp_scale)
 
 		object_selected = context.selected_objects[0]
-		base_name = copy.copy(object_selected.name)
 		base_dims = copy.copy(object_selected.dimensions)
 
 		count = 1
@@ -251,9 +250,6 @@ class experimentation(Operator):
 		for scale in scales:
 			new_dims = base_dims * scale
 			object_selected.dimensions = new_dims
-
-			size_string = ' {:.2f}mm'.format(max(new_dims))
-			object_selected.name = base_name + size_string
 
 			progress_string = "Running on {:d} of {:d} objects".format(count, total)
 			print(progress_string)
@@ -278,69 +274,6 @@ class experimentation(Operator):
 
 
 # end simpleBrixelate
-
-class multiplyObjects(Operator):
-	'''Multiplies currently selected object'''
-	bl_idname = "tool.multiply_object"
-	bl_label = "Multiply Objects"
-	bl_options = {"UNDO"}
-
-	@classmethod
-	def poll(self, context):
-		if len(context.selected_objects) == 1 and context.object.type == 'MESH':
-			return True
-
-	def execute(self, context):
-		scene = context.scene
-		object_selected = context.selected_objects[0]
-		max_range = scene.my_settings.max_range
-		end_scale = scene.my_settings.scale_factor
-
-		original = bpy.data.objects[object_selected.name]
-
-		base_name = object_selected.name
-		object_selected.name += ' {:.2f}mm'.format(max(object_selected.dimensions))
-
-		location = original.matrix_world.to_translation()
-
-		if max_range > 1:
-			copies = []
-			prev_pos = location
-			count = 0
-			for num in range(max_range - 1):
-				interp_scale = ((num + 1) / (max_range - 1)) * (end_scale - 1) + 1
-
-				copy = original.copy()
-				copy.scale = [interp_scale, interp_scale, interp_scale]
-
-				dist = object_selected.dimensions[0] * interp_scale + 5
-
-				dist_travelled = (prev_pos - location).length
-				if num > 5 and dist_travelled % 250 < 50:
-					count += 1
-					offset = object_selected.dimensions[1] * interp_scale + 10
-					prev_pos = Vector((0, offset * count, 0)) + location
-
-				translation = Vector((dist, 0, 0)) + prev_pos
-				copy.location = translation
-
-				copy.data = copy.data.copy()  # also duplicate mesh, remove for linked duplicate
-				size = max(object_selected.dimensions) * interp_scale
-				size_string = ' {:.2f}mm'.format(size)
-				copy.name = base_name + size_string
-				copies.append(copy)
-
-				prev_pos = translation
-
-			for copy in copies:
-				scene.objects.link(copy)
-
-		self.report({"INFO"}, "Multiplying finished")
-		return {'FINISHED'}
-
-	def invoke(self, context, event):
-		return self.execute(context)
-
 
 class resetBrixelate(Operator):
 	'''Removes all LEGO bricks'''
@@ -448,7 +381,7 @@ class brixelateFunctions():
 			if kwargs['output']:
 				# name, dimensions, object vol, lego vol, vol %, brick_count, bricks
 				name_string = object_selected.name + ','
-				bounded_string = str(use_shell_as_bounds) + ','
+				bounded_string = str(int(use_shell_as_bounds)) + ','
 				dimensions_string = '{:.3f},{:.3f},{:.3f},'.format(object_selected.dimensions[0],
 															 object_selected.dimensions[1],
 															 object_selected.dimensions[2])
@@ -506,8 +439,8 @@ class brixelateFunctions():
 
 		directional_list_of_bricks = []
 		for brick_name in bricks_to_use:
-			b0 = int(brick_name[0])
-			b1 = int(brick_name[2])
+			b0 = int(brick_name[1])
+			b1 = int(brick_name[3])
 			b2 = 1 if 'Plate' in brick_name else 3
 			brick = [b0, b1, b2]
 			directional_list_of_bricks.append(brick)
@@ -694,7 +627,7 @@ class legoData():
 			first = brick[1]
 			second = brick[0]
 
-		name = '{0}x{1} {2}'.format(first, second, type)
+		name = '_{0}x{1}_{2}'.format(first, second, type)
 
 		return name
 
@@ -1030,7 +963,7 @@ class MySettings(PropertyGroup):
 
 
 classes = (
-	simpleBrixelate, resetBrixelate, experimentation, multiplyObjects,
+	simpleBrixelate, resetBrixelate, experimentation,
 	BrixelPanel,
 	MySettings)
 

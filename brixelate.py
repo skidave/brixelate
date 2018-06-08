@@ -759,14 +759,21 @@ class meshCheck():
 
 		world_to_obj = model.matrix_world.inverted()
 
+		print("Centre: {}".format(centre))
 		i = 0
 		for e in edges:
+			# TODO - ray check in both directions to get both points of a double intersecting ray.
+			# TODO - check which side of the intersection is inside the object.
 			start, end = e
 			dist = (world_to_obj * end - world_to_obj * start).length
 			ray_dir = world_to_obj * end - world_to_obj * start
 			ray_dir.normalize()
 			f = model.ray_cast(world_to_obj * start, ray_dir, dist)
 			hit, loc, normal, face_idx = f
+
+			world_loc = model.matrix_world * loc
+			if hit:
+				print("Start: {} -> Hit: {} -> End: {}".format(start, world_loc, end))
 
 			edgeIntersects[i] = hit
 			i += 1

@@ -10,7 +10,6 @@ bl_info = {
 	"tracker_url": "",
 	"category": "Mesh"
 }
-
 import bpy
 from bpy.props import (StringProperty,
 					   BoolProperty,
@@ -27,6 +26,7 @@ from bpy.types import (Panel,
 					   PropertyGroup,
 					   )
 from bpy.utils import register_class, unregister_class
+from bpy_extras.object_utils import AddObjectHelper, object_data_add
 import bmesh
 import math
 import mathutils
@@ -329,8 +329,13 @@ class brixelateFunctions():
 		getVertices = meshCheck.getVertices
 		getEdges = meshCheck.getEdges
 		rayInside = meshCheck.rayInside
+		surface_normals = meshCheck.surface_normals
 
 		object_selected.select = False
+
+		object_as_bmesh = bmesh.new()
+		object_as_bmesh.from_mesh(object_selected.data)
+		object_as_bmesh.faces.ensure_lookup_table()
 
 		start_time = time.time()
 		for x in range(-xbricks, xbricks + 1):
@@ -346,6 +351,7 @@ class brixelateFunctions():
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 					else:
 						if centreIntersect or sum(edgeIntersects) > 0:
+							surface_normals(object_selected, vertices)
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 		end_time = time.time()
 		testing_time = (end_time - start_time)
@@ -355,7 +361,6 @@ class brixelateFunctions():
 				add_bricks = False
 		else:
 			add_bricks = True
-
 
 		lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use,
 																	   add_bricks=add_bricks)
@@ -383,8 +388,8 @@ class brixelateFunctions():
 				name_string = object_selected.name + ','
 				bounded_string = str(int(use_shell_as_bounds)) + ','
 				dimensions_string = '{:.3f},{:.3f},{:.3f},'.format(object_selected.dimensions[0],
-															 object_selected.dimensions[1],
-															 object_selected.dimensions[2])
+																   object_selected.dimensions[1],
+																   object_selected.dimensions[2])
 				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
 				brick_count_string = '{:d},'.format(brick_count)
 
@@ -759,7 +764,7 @@ class meshCheck():
 
 		world_to_obj = model.matrix_world.inverted()
 
-		print("Centre: {}".format(centre))
+		# print("Centre: {}".format(centre))
 		i = 0
 		for e in edges:
 			# TODO - ray check in both directions to get both points of a double intersecting ray.
@@ -772,8 +777,8 @@ class meshCheck():
 			hit, loc, normal, face_idx = f
 
 			world_loc = model.matrix_world * loc
-			if hit:
-				print("Start: {} -> Hit: {} -> End: {}".format(start, world_loc, end))
+			# if hit:
+			# 	print("Start: {} -> Hit: {} -> End: {}".format(start, world_loc, end))
 
 			edgeIntersects[i] = hit
 			i += 1
@@ -805,16 +810,7 @@ class meshCheck():
 
 		return edgeIntersects, centreIntersect
 
-	def CheckBrickIntersect(self, centre, object):
-
-		if self.CheckCentreInside(centre, object):
-			brickIntersect = True
-
-		return brickIntersect
-
-	def CheckCentreInside(self, centre, object):
-
-		world_to_obj = object.matrix_world.inverted()
+	def surface_normals(self, object, vertices):
 
 		axes = \
 			[
@@ -827,21 +823,70 @@ class meshCheck():
 			]
 
 		count = 0
-		for a in axes:
-			ray_dir = world_to_obj * (centre + a) - world_to_obj * centre
-			ray_dir.normalize()
-			f = object.ray_cast(world_to_obj * centre, ray_dir, 10000)
-			hit, loc, normal, face_idx = f
 
-			if hit:
-				count += 1
+		world_to_obj = object.matrix_world.inverted()
+		obj_to_world = object.matrix_world
 
-		if count == 6:
-			centreInside = True
-		else:
-			centreInside = False
+		surface_normal_array = []
+		dist_array = []
 
-		return centreInside
+		points_inside = []
+		for vert in vertices:
+
+			count = 0
+			for a in axes:
+				ray_dir = world_to_obj * (vert + a) - world_to_obj * vert
+				ray_dir.normalize()
+				f = object.ray_cast(world_to_obj * vert, ray_dir, 10000)
+				hit, loc, normal, face_idx = f
+
+				if hit:
+					count += 1
+
+			if count == 6:
+				point_inside = True
+
+			else:
+				point_inside = False
+
+			points_inside.append(point_inside)
+
+		if not all(point == True for point in points_inside):
+			for i, vert in enumerate(vertices):
+
+				if points_inside[i]:
+					direction = -1
+				else:
+					direction = 1
+
+				object_vert = world_to_obj * vert
+
+				p = object.closest_point_on_mesh(object_vert)
+				result, loc, normal, idx = p
+
+				point_on_mesh = obj_to_world * loc
+				normal_at_point = obj_to_world * normal
+
+				dist_from_vert_to_point = (vert - point_on_mesh).length * direction
+
+				dist_array.append(dist_from_vert_to_point)
+				surface_normal_array.append(point_on_mesh)
+
+				##Drawing
+				verts = [vert, point_on_mesh, normal_at_point]
+				edges = [[0, 1]]
+				faces = []
+				mesh = bpy.data.meshes.new(name="New Object Mesh")
+				mesh.from_pydata(verts, edges, faces)
+				obj = bpy.data.objects.new("MyObject", mesh)
+				scene = bpy.context.scene
+				scene.objects.link(obj)
+
+			# print(dist_array)
+			surface_deviation = [min(dist_array), max(dist_array)]
+			print(surface_deviation)
+
+			return surface_deviation
 
 	def CheckBVHIntersection(self, object1, object2):
 		'''This function checks surface intersections of two objects, will not detect if one is fully inside another'''

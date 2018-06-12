@@ -346,12 +346,13 @@ class brixelateFunctions():
 					edges = getEdges(vertices)
 
 					edgeIntersects, centreIntersect = rayInside(edges, centre, object_selected)
+					surface_normals(object_selected, vertices)
 					if use_shell_as_bounds:
 						if centreIntersect and sum(edgeIntersects) == 0:
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 					else:
 						if centreIntersect or sum(edgeIntersects) > 0:
-							surface_normals(object_selected, vertices)
+							#surface_normals(object_selected, vertices)
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 		end_time = time.time()
 		testing_time = (end_time - start_time)
@@ -873,18 +874,19 @@ class meshCheck():
 				surface_normal_array.append(point_on_mesh)
 
 				##Drawing
-				verts = [vert, point_on_mesh, normal_at_point]
-				edges = [[0, 1]]
-				faces = []
-				mesh = bpy.data.meshes.new(name="New Object Mesh")
-				mesh.from_pydata(verts, edges, faces)
-				obj = bpy.data.objects.new("MyObject", mesh)
-				scene = bpy.context.scene
-				scene.objects.link(obj)
+				if dist_from_vert_to_point < 0:
+					verts = [vert, point_on_mesh, normal_at_point]
+					edges = [[0, 1]]
+					faces = []
+					mesh = bpy.data.meshes.new(name="New Object Mesh")
+					mesh.from_pydata(verts, edges, faces)
+					obj = bpy.data.objects.new("MyObject", mesh)
+					scene = bpy.context.scene
+					scene.objects.link(obj)
 
 			# print(dist_array)
 			surface_deviation = [min(dist_array), max(dist_array)]
-			print(surface_deviation)
+			#print(surface_deviation)
 
 			return surface_deviation
 

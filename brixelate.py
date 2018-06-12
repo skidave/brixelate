@@ -337,6 +337,9 @@ class brixelateFunctions():
 		object_as_bmesh.from_mesh(object_selected.data)
 		object_as_bmesh.faces.ensure_lookup_table()
 
+		total_list_vertices_dict = []
+		total_vert_and_dist_dicts = []
+
 		start_time = time.time()
 		for x in range(-xbricks, xbricks + 1):
 			for y in range(-ybricks, ybricks + 1):
@@ -345,17 +348,31 @@ class brixelateFunctions():
 					vertices, centre = getVertices(translation, w, d, h)
 					edges = getEdges(vertices)
 
+					temp_dict = {}
+					for vert in vertices:
+						temp_dict['vertex'] = vert
+
 					edgeIntersects, centreIntersect = rayInside(edges, centre, object_selected)
-					surface_normals(object_selected, vertices)
+
+					verts_and_dist = surface_normals(object_selected, vertices)
+					total_vert_and_dist_dicts.append(verts_and_dist)
+
 					if use_shell_as_bounds:
 						if centreIntersect and sum(edgeIntersects) == 0:
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
+
+							total_list_vertices_dict.append(temp_dict)
 					else:
 						if centreIntersect or sum(edgeIntersects) > 0:
 							#surface_normals(object_selected, vertices)
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 		end_time = time.time()
 		testing_time = (end_time - start_time)
+
+
+		print(total_list_vertices_dict)
+		print(total_vert_and_dist_dicts)
+
 
 		if 'output' in kwargs:
 			if kwargs['output']:
@@ -572,6 +589,12 @@ class brixelateFunctions():
 			bmesh.ops.triangulate(bm, faces=bm.faces)
 
 		return bm
+
+	def vertex_cleanup(self, vertex_dict, vertex_dict_with_dists):
+
+		cleaned_vertex_dist = {}
+		
+		return cleaned_vertex_dist
 
 
 class legoData():
@@ -823,13 +846,12 @@ class meshCheck():
 				Vector((0, 0, -1))
 			]
 
-		count = 0
-
 		world_to_obj = object.matrix_world.inverted()
 		obj_to_world = object.matrix_world
 
 		surface_normal_array = []
 		dist_array = []
+		vert_and_dist_dicts = []
 
 		points_inside = []
 		for vert in vertices:
@@ -869,8 +891,12 @@ class meshCheck():
 				normal_at_point = obj_to_world * normal
 
 				dist_from_vert_to_point = (vert - point_on_mesh).length * direction
-
 				dist_array.append(dist_from_vert_to_point)
+				temp_dict = {}
+				temp_dict['vertex'] = vert
+				temp_dict['distance'] = dist_from_vert_to_point
+				vert_and_dist_dicts.append(temp_dict)
+
 				surface_normal_array.append(point_on_mesh)
 
 				##Drawing
@@ -888,7 +914,7 @@ class meshCheck():
 			surface_deviation = [min(dist_array), max(dist_array)]
 			#print(surface_deviation)
 
-			return surface_deviation
+			return vert_and_dist_dicts
 
 	def CheckBVHIntersection(self, object1, object2):
 		'''This function checks surface intersections of two objects, will not detect if one is fully inside another'''

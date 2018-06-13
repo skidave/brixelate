@@ -613,12 +613,12 @@ class brixelateFunctions():
 		for i in indices:
 			cleaned_vertex_distances.append(distances[i])
 
-		print(len(brick_vertices))
+		#print(len(brick_vertices))
 		num = len(cleaned_vertex_distances)
 		dist_mean = np.mean(cleaned_vertex_distances)
 		dist_std = np.std(cleaned_vertex_distances)
 		stats_string = "Mean: {}, Std: {}, Sample: {}".format(dist_mean, dist_std, num)
-		print(stats_string)
+		#print(stats_string)
 
 		return dist_mean, dist_std, num
 

@@ -230,7 +230,7 @@ class experimentation(Operator):
 		for name in bricks_to_use:
 			brick_string = brick_string + name + ','
 
-		csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + '\n'
+		csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,mean_dist,std_dist,sample_size,brick_count,' + brick_string + '\n'
 		output_file.write(csv_header)
 		output_file.close()
 
@@ -349,35 +349,27 @@ class brixelateFunctions():
 					vertices, centre = getVertices(translation, w, d, h)
 					edges = getEdges(vertices)
 
-
-
 					edgeIntersects, centreIntersect = rayInside(edges, centre, object_selected)
 
 					verts, dists = surface_normals(object_selected, vertices)
 
 					if verts is not None:
-						for i in verts:
-							nearest_vertices.append(i)
-						for j in dists:
-							distances.append(j)
+						nearest_vertices.extend(verts)
+						distances.extend(dists)
 
 					if use_shell_as_bounds:
 						if centreIntersect and sum(edgeIntersects) == 0:
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 
-							for vert in vertices:
-								total_vertices.append(vert)
+							total_vertices.extend(vertices)
 					else:
 						if centreIntersect or sum(edgeIntersects) > 0:
-							#surface_normals(object_selected, vertices)
+							# surface_normals(object_selected, vertices)
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 		end_time = time.time()
 		testing_time = (end_time - start_time)
 
-
-		print(total_vertices)
-		print(nearest_vertices)
-		# print(distances)
+		dist_mean, dist_std, sample_size = self.vertex_cleanup(total_vertices, nearest_vertices, distances)
 
 		if 'output' in kwargs:
 			if kwargs['output']:
@@ -415,6 +407,8 @@ class brixelateFunctions():
 																   object_selected.dimensions[2])
 				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
 				brick_count_string = '{:d},'.format(brick_count)
+				stats_string = '{:f},{:f},{:f},'.format(dist_mean, dist_std, sample_size)
+
 
 				sorted(used_bricks_dict)
 				bricks_used_string = ''
@@ -422,7 +416,7 @@ class brixelateFunctions():
 					string = str(i) + ','
 					bricks_used_string += string
 
-				output_data = name_string + bounded_string + dimensions_string + volume_string + brick_count_string + bricks_used_string + '\n'
+				output_data = name_string + bounded_string + dimensions_string + volume_string + stats_string + brick_count_string + bricks_used_string + '\n'
 
 				return output_data
 			else:
@@ -597,9 +591,36 @@ class brixelateFunctions():
 
 	def vertex_cleanup(self, brick_vertices, intersection_brick_vertices, distances):
 
-		cleaned_vertex_dist = {}
+		cleaned_vertex_distances = []
 
-		return cleaned_vertex_dist
+		brick_vertices = np.asarray(brick_vertices, dtype=np.float64)
+		brick_vertices = np.round(brick_vertices, 5)
+		brick_vertices = np.unique(brick_vertices, axis=0)
+
+		int_vertices = np.asarray(intersection_brick_vertices, dtype=np.float64)
+		int_vertices = np.round(int_vertices, 5)
+		distances = np.asarray(distances, dtype=np.float64)
+
+		indices = []
+		for v in brick_vertices:
+			index = np.where((int_vertices == v).all(axis=1))
+			try:
+				indices.append(index[0][0])
+				#print(len(index[0]))
+			except:
+				pass
+
+		for i in indices:
+			cleaned_vertex_distances.append(distances[i])
+
+		print(len(brick_vertices))
+		num = len(cleaned_vertex_distances)
+		dist_mean = np.mean(cleaned_vertex_distances)
+		dist_std = np.std(cleaned_vertex_distances)
+		stats_string = "Mean: {}, Std: {}, Sample: {}".format(dist_mean, dist_std, num)
+		print(stats_string)
+
+		return dist_mean, dist_std, num
 
 
 class legoData():
@@ -856,7 +877,6 @@ class meshCheck():
 
 		surface_normal_array = []
 
-
 		points_inside = []
 		for vert in vertices:
 
@@ -905,19 +925,19 @@ class meshCheck():
 				surface_normal_array.append(point_on_mesh)
 
 				##Drawing
-				if dist_from_vert_to_point < 0:
-					line_verts = [vert, point_on_mesh, normal_at_point]
-					edges = [[0, 1]]
-					faces = []
-					mesh = bpy.data.meshes.new(name="New Object Mesh")
-					mesh.from_pydata(line_verts, edges, faces)
-					obj = bpy.data.objects.new("MyObject", mesh)
-					scene = bpy.context.scene
-					scene.objects.link(obj)
+				# if dist_from_vert_to_point < 0:
+				# 	line_verts = [vert, point_on_mesh, normal_at_point]
+				# 	edges = [[0, 1]]
+				# 	faces = []
+				# 	mesh = bpy.data.meshes.new(name="New Object Mesh")
+				# 	mesh.from_pydata(line_verts, edges, faces)
+				# 	obj = bpy.data.objects.new("MyObject", mesh)
+				# 	scene = bpy.context.scene
+				# 	scene.objects.link(obj)
 
 			# print(dist_array)
 			surface_deviation = [min(dists), max(dists)]
-			#print(surface_deviation)
+		# print(surface_deviation)
 		else:
 			dists = []
 			verts = []

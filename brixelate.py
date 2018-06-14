@@ -329,7 +329,6 @@ class brixelateFunctions():
 		getVertices = meshCheck.getVertices
 		getEdges = meshCheck.getEdges
 		rayInside = meshCheck.rayInside
-		surface_normals = meshCheck.surface_normals
 
 		object_selected.select = False
 
@@ -337,9 +336,8 @@ class brixelateFunctions():
 		object_as_bmesh.from_mesh(object_selected.data)
 		object_as_bmesh.faces.ensure_lookup_table()
 
-		total_vertices = []
-		nearest_vertices = []
-		distances = []
+		internal_vertices = []
+		boundary_vertices = []
 
 		start_time = time.time()
 		for x in range(-xbricks, xbricks + 1):
@@ -351,25 +349,24 @@ class brixelateFunctions():
 
 					edgeIntersects, centreIntersect = rayInside(edges, centre, object_selected)
 
-					verts, dists = surface_normals(object_selected, vertices)
+					if centreIntersect and sum(edgeIntersects) == 0:
+						internal_vertices.extend(vertices)
 
-					if verts is not None:
-						nearest_vertices.extend(verts)
-						distances.extend(dists)
+					if centreIntersect or sum(edgeIntersects) > 0:
+						boundary_vertices.extend(vertices)
 
+					# Brick Array assignment
 					if use_shell_as_bounds:
 						if centreIntersect and sum(edgeIntersects) == 0:
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
-
-							total_vertices.extend(vertices)
 					else:
 						if centreIntersect or sum(edgeIntersects) > 0:
-							# surface_normals(object_selected, vertices)
 							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
+
 		end_time = time.time()
 		testing_time = (end_time - start_time)
 
-		dist_mean, dist_std, sample_size = self.vertex_cleanup(total_vertices, nearest_vertices, distances)
+		dist_mean, dist_std, sample_size = self.surface_normals(object_selected, internal_vertices, boundary_vertices)
 
 		if 'output' in kwargs:
 			if kwargs['output']:
@@ -589,39 +586,92 @@ class brixelateFunctions():
 
 		return bm
 
-	def vertex_cleanup(self, brick_vertices, intersection_brick_vertices, distances):
+	def surface_normals(self, object, internal_vertices, boundary_vertices):
 
-		cleaned_vertex_distances = []
+		boundary_vertices = np.asarray(boundary_vertices, dtype=np.float64)
+		boundary_vertices = np.round(boundary_vertices, 4)
+		boundary_vertices, boundary_counts = np.unique(boundary_vertices, axis=0, return_counts=True)
+		boundary_indices = np.where(boundary_counts == 8)
+		cleaned_boundary_vertices = np.delete(internal_vertices, boundary_indices[0], axis=0)
 
-		brick_vertices = np.asarray(brick_vertices, dtype=np.float64)
-		brick_vertices = np.round(brick_vertices, 5)
-		brick_vertices = np.unique(brick_vertices, axis=0)
 
-		int_vertices = np.asarray(intersection_brick_vertices, dtype=np.float64)
-		int_vertices = np.round(int_vertices, 5)
-		distances = np.asarray(distances, dtype=np.float64)
+		internal_vertices = np.asarray(internal_vertices, dtype=np.float64)
+		internal_vertices = np.round(internal_vertices, 4)
+		internal_vertices, internal_counts = np.unique(internal_vertices, axis=0, return_counts=True)
 
-		indices = []
-		for v in brick_vertices:
-			index = np.where((int_vertices == v).all(axis=1))
-			try:
-				indices.append(index[0][0])
-				#print(len(index[0]))
-			except:
-				pass
+		internal_indices = np.where(internal_counts==8)
+		cleaned_internal_vertices = np.delete(internal_vertices, internal_indices[0], axis=0)
 
-		for i in indices:
-			cleaned_vertex_distances.append(distances[i])
+		axes = \
+			[
+				Vector((1, 0, 0)),
+				Vector((-1, 0, 0)),
+				Vector((0, 1, 0)),
+				Vector((0, -1, 0)),
+				Vector((0, 0, 1)),
+				Vector((0, 0, -1))
+			]
 
-		#print(len(brick_vertices))
-		num = len(cleaned_vertex_distances)
-		dist_mean = np.mean(cleaned_vertex_distances)
-		dist_std = np.std(cleaned_vertex_distances)
-		stats_string = "Mean: {}, Std: {}, Sample: {}".format(dist_mean, dist_std, num)
-		#print(stats_string)
+		world_to_obj = object.matrix_world.inverted()
+		obj_to_world = object.matrix_world
 
-		return dist_mean, dist_std, num
+		points_inside = []
+		for vert in cleaned_internal_vertices:
 
+			vert = Vector((vert))
+			count = 0
+			for a in axes:
+				ray_dir = world_to_obj * (vert + a) - world_to_obj * vert
+				ray_dir.normalize()
+				f = object.ray_cast(world_to_obj * vert, ray_dir, 10000)
+				hit, loc, normal, face_idx = f
+				if hit:
+					count += 1
+			if count == 6:
+				point_inside = True
+			else:
+				point_inside = False
+			points_inside.append(point_inside)
+
+		surface_deviation = []
+
+		for i, vert in enumerate(cleaned_internal_vertices):
+
+			vert = Vector((vert))
+
+			if points_inside[i]:
+				direction = -1
+			else:
+				direction = 1
+
+			object_vert = world_to_obj * vert
+			p = object.closest_point_on_mesh(object_vert)
+			result, loc, normal, idx = p
+
+			point_on_mesh = obj_to_world * loc
+			normal_at_point = obj_to_world * normal
+
+			dist_from_vert_to_point = (vert - point_on_mesh).length * direction
+			surface_deviation.append(dist_from_vert_to_point)
+
+			##Drawing
+			# if dist_from_vert_to_point < 0:
+			# 	line_verts = [vert, point_on_mesh, normal_at_point]
+			# 	edges = [[0, 1]]
+			# 	faces = []
+			# 	mesh = bpy.data.meshes.new(name="New Object Mesh")
+			# 	mesh.from_pydata(line_verts, edges, faces)
+			# 	obj = bpy.data.objects.new("MyObject", mesh)
+			# 	scene = bpy.context.scene
+			# 	scene.objects.link(obj)
+
+		sample_size = len(cleaned_internal_vertices)
+		dist_mean = np.mean(surface_deviation)
+		dist_std = np.std(surface_deviation)
+		stats_string = "Mean: {}, Std: {}, Sample: {}".format(dist_mean, dist_std, sample_size)
+		print(stats_string)
+
+		return dist_mean, dist_std, sample_size
 
 class legoData():
 	# 1x1 LEGO plate dimensions
@@ -860,89 +910,6 @@ class meshCheck():
 
 		return edgeIntersects, centreIntersect
 
-	def surface_normals(self, object, vertices):
-
-		axes = \
-			[
-				Vector((1, 0, 0)),
-				Vector((-1, 0, 0)),
-				Vector((0, 1, 0)),
-				Vector((0, -1, 0)),
-				Vector((0, 0, 1)),
-				Vector((0, 0, -1))
-			]
-
-		world_to_obj = object.matrix_world.inverted()
-		obj_to_world = object.matrix_world
-
-		surface_normal_array = []
-
-		points_inside = []
-		for vert in vertices:
-
-			count = 0
-			for a in axes:
-				ray_dir = world_to_obj * (vert + a) - world_to_obj * vert
-				ray_dir.normalize()
-				f = object.ray_cast(world_to_obj * vert, ray_dir, 10000)
-				hit, loc, normal, face_idx = f
-
-				if hit:
-					count += 1
-
-			if count == 6:
-				point_inside = True
-
-			else:
-				point_inside = False
-
-			points_inside.append(point_inside)
-
-		if not all(point == True for point in points_inside):
-			dists = []
-			verts = []
-
-			for i, vert in enumerate(vertices):
-
-				if points_inside[i]:
-					direction = -1
-				else:
-					direction = 1
-
-				object_vert = world_to_obj * vert
-
-				p = object.closest_point_on_mesh(object_vert)
-				result, loc, normal, idx = p
-
-				point_on_mesh = obj_to_world * loc
-				normal_at_point = obj_to_world * normal
-
-				dist_from_vert_to_point = (vert - point_on_mesh).length * direction
-				dists.append(dist_from_vert_to_point)
-
-				verts.append(vert)
-
-				surface_normal_array.append(point_on_mesh)
-
-				##Drawing
-				# if dist_from_vert_to_point < 0:
-				# 	line_verts = [vert, point_on_mesh, normal_at_point]
-				# 	edges = [[0, 1]]
-				# 	faces = []
-				# 	mesh = bpy.data.meshes.new(name="New Object Mesh")
-				# 	mesh.from_pydata(line_verts, edges, faces)
-				# 	obj = bpy.data.objects.new("MyObject", mesh)
-				# 	scene = bpy.context.scene
-				# 	scene.objects.link(obj)
-
-			# print(dist_array)
-			surface_deviation = [min(dists), max(dists)]
-		# print(surface_deviation)
-		else:
-			dists = []
-			verts = []
-
-		return verts, dists
 
 	def CheckBVHIntersection(self, object1, object2):
 		'''This function checks surface intersections of two objects, will not detect if one is fully inside another'''

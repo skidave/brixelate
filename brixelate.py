@@ -597,79 +597,85 @@ class brixelateFunctions():
 
 		internal_vertices = np.asarray(internal_vertices, dtype=np.float64)
 		internal_vertices = np.round(internal_vertices, 4)
-		internal_vertices, internal_counts = np.unique(internal_vertices, axis=0, return_counts=True)
+		try:
+			internal_vertices, internal_counts = np.unique(internal_vertices, axis=0, return_counts=True)
 
-		internal_indices = np.where(internal_counts==8)
-		cleaned_internal_vertices = np.delete(internal_vertices, internal_indices[0], axis=0)
+			internal_indices = np.where(internal_counts==8)
+			cleaned_internal_vertices = np.delete(internal_vertices, internal_indices[0], axis=0)
+		
 
-		axes = \
-			[
-				Vector((1, 0, 0)),
-				Vector((-1, 0, 0)),
-				Vector((0, 1, 0)),
-				Vector((0, -1, 0)),
-				Vector((0, 0, 1)),
-				Vector((0, 0, -1))
-			]
+			axes = \
+				[
+					Vector((1, 0, 0)),
+					Vector((-1, 0, 0)),
+					Vector((0, 1, 0)),
+					Vector((0, -1, 0)),
+					Vector((0, 0, 1)),
+					Vector((0, 0, -1))
+				]
 
-		world_to_obj = object.matrix_world.inverted()
-		obj_to_world = object.matrix_world
+			world_to_obj = object.matrix_world.inverted()
+			obj_to_world = object.matrix_world
 
-		points_inside = []
-		for vert in cleaned_internal_vertices:
+			points_inside = []
+			for vert in cleaned_internal_vertices:
 
-			vert = Vector((vert))
-			count = 0
-			for a in axes:
-				ray_dir = world_to_obj * (vert + a) - world_to_obj * vert
-				ray_dir.normalize()
-				f = object.ray_cast(world_to_obj * vert, ray_dir, 10000)
-				hit, loc, normal, face_idx = f
-				if hit:
-					count += 1
-			if count == 6:
-				point_inside = True
-			else:
-				point_inside = False
-			points_inside.append(point_inside)
+				vert = Vector((vert))
+				count = 0
+				for a in axes:
+					ray_dir = world_to_obj * (vert + a) - world_to_obj * vert
+					ray_dir.normalize()
+					f = object.ray_cast(world_to_obj * vert, ray_dir, 10000)
+					hit, loc, normal, face_idx = f
+					if hit:
+						count += 1
+				if count == 6:
+					point_inside = True
+				else:
+					point_inside = False
+				points_inside.append(point_inside)
 
-		surface_deviation = []
+			surface_deviation = []
 
-		for i, vert in enumerate(cleaned_internal_vertices):
+			for i, vert in enumerate(cleaned_internal_vertices):
 
-			vert = Vector((vert))
+				vert = Vector((vert))
 
-			if points_inside[i]:
-				direction = -1
-			else:
-				direction = 1
+				if points_inside[i]:
+					direction = -1
+				else:
+					direction = 1
 
-			object_vert = world_to_obj * vert
-			p = object.closest_point_on_mesh(object_vert)
-			result, loc, normal, idx = p
+				object_vert = world_to_obj * vert
+				p = object.closest_point_on_mesh(object_vert)
+				result, loc, normal, idx = p
 
-			point_on_mesh = obj_to_world * loc
-			normal_at_point = obj_to_world * normal
+				point_on_mesh = obj_to_world * loc
+				normal_at_point = obj_to_world * normal
 
-			dist_from_vert_to_point = (vert - point_on_mesh).length * direction
-			surface_deviation.append(dist_from_vert_to_point)
+				dist_from_vert_to_point = (vert - point_on_mesh).length * direction
+				surface_deviation.append(dist_from_vert_to_point)
 
-			##Drawing
-			# if dist_from_vert_to_point < 0:
-			# 	line_verts = [vert, point_on_mesh, normal_at_point]
-			# 	edges = [[0, 1]]
-			# 	faces = []
-			# 	mesh = bpy.data.meshes.new(name="New Object Mesh")
-			# 	mesh.from_pydata(line_verts, edges, faces)
-			# 	obj = bpy.data.objects.new("MyObject", mesh)
-			# 	scene = bpy.context.scene
-			# 	scene.objects.link(obj)
+				##Drawing
+				# if dist_from_vert_to_point < 0:
+				# 	line_verts = [vert, point_on_mesh, normal_at_point]
+				# 	edges = [[0, 1]]
+				# 	faces = []
+				# 	mesh = bpy.data.meshes.new(name="New Object Mesh")
+				# 	mesh.from_pydata(line_verts, edges, faces)
+				# 	obj = bpy.data.objects.new("MyObject", mesh)
+				# 	scene = bpy.context.scene
+				# 	scene.objects.link(obj)
 
-		sample_size = len(cleaned_internal_vertices)
-		dist_mean = np.mean(surface_deviation)
-		dist_std = np.std(surface_deviation)
-		stats_string = "Mean: {}, Std: {}, Sample: {}".format(dist_mean, dist_std, sample_size)
-		print(stats_string)
+			sample_size = len(cleaned_internal_vertices)
+			dist_mean = np.mean(surface_deviation)
+			dist_std = np.std(surface_deviation)
+			stats_string = "Mean: {}, Std: {}, Sample: {}".format(dist_mean, dist_std, sample_size)
+			#print(stats_string)
+		except:
+			sample_size = math.nan
+			dist_mean = math.nan
+			dist_std = math.nan
 
 		return dist_mean, dist_std, sample_size
 

@@ -12,6 +12,11 @@ from bpy.props import (StringProperty,
 from .settings_utils import *
 
 class PanelSettings(bpy.types.PropertyGroup):
+
+	use_lego = BoolProperty(name="Use Lego Bricks", default=True)
+	use_nano = BoolProperty(name="Use NanoBlocks", default=False)
+	use_duplo = BoolProperty(name="Use Duplo Bricks", default=False)
+
 	use_shell_as_bounds = BoolProperty(
 		name="Confine to Shell",
 		description="Constrains the LEGO bricks to within the shell",

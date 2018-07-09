@@ -16,75 +16,85 @@ class BrixelPanel(bpy.types.Panel):
 		layout = self.layout
 		col = layout.column(align=True)
 		box = col.box()
-		box.label("Brixelate", icon="GROUP_VERTEX")
+		box.label("Brick Types", icon="GROUP_VERTEX")
+
+
+		row = box.row(align=True)
+		row.prop(settings, "use_nano", text="NanoBlocks", icon="FILE_TICK" if settings.use_nano else "RADIOBUT_OFF",
+				 toggle=True)
+		row.prop(settings, "use_lego", text="LEGO Bricks", icon="FILE_TICK" if settings.use_lego else "RADIOBUT_OFF",
+				 toggle=True)
+		row.prop(settings, "use_duplo", text="Duplo Bricks", icon="FILE_TICK" if settings.use_duplo else "RADIOBUT_OFF",
+				 toggle=True)
 		box.prop(settings, "use_shell_as_bounds")
 
-		box.label("Brick Layout", icon="SCRIPT")  # or SCRIPTWIN
-		row = box.row(align=True)
-		row.prop(settings, "all_plates", text="All Plates", icon="FILE_TICK" if settings.all_plates else "RADIOBUT_OFF",
-				 toggle=True)
-		row.prop(settings, "all_bricks", text="All Bricks", icon="FILE_TICK" if settings.all_bricks else "RADIOBUT_OFF",
-				 toggle=True)
-
-		row = box.row(align=True)
-		row.alignment = 'LEFT'
-		row.prop(settings, "brick_selection", icon="TRIA_DOWN" if settings.brick_selection else "TRIA_RIGHT",
-				 text="Options", emboss=False)
-
-		if settings.brick_selection:
+		if settings.use_lego:
+			box.label("LEGO Brick Layout", icon="SCRIPT")  # or SCRIPTWIN
 			row = box.row(align=True)
-			row.separator()
-			col = row.column(align=True)
-			col.alignment = 'RIGHT'
-			col.label(text="1x8")
-			col.label(text="1x6")
-			col.label(text="1x4")
-			col.label(text="1x3")
-			col.label(text="1x2")
-			col.label(text="1x1")
-			col = row.column(align=True)
-			col.alignment = 'EXPAND'
-			for i, p in enumerate(settings.plates1):
-				col.prop(settings, 'plates1', index=i, text="Plate",
-						 icon="FILE_TICK" if settings.plates1[i] else "RADIOBUT_OFF", toggle=True)
-
-			col = row.column(align=True)
-			col.alignment = 'EXPAND'
-			for i, p in enumerate(settings.bricks1):
-				col.prop(settings, 'bricks1', index=i, text="Brick",
-						 icon="FILE_TICK" if settings.bricks1[i] else "RADIOBUT_OFF", toggle=True)
+			row.prop(settings, "all_plates", text="LEGO Plates", icon="FILE_TICK" if settings.all_plates else "RADIOBUT_OFF",
+					 toggle=True)
+			row.prop(settings, "all_bricks", text="LEGO Bricks", icon="FILE_TICK" if settings.all_bricks else "RADIOBUT_OFF",
+					 toggle=True)
 
 			row = box.row(align=True)
-			row.separator()
-			col = row.column(align=True)
-			col.alignment = 'RIGHT'
-			col.label(text="2x8")
-			col.label(text="2x6")
-			col.label(text="2x4")
-			col.label(text="2x3")
-			col.label(text="2x2")
-			col = row.column(align=True)
-			col.alignment = 'EXPAND'
-			for i, p in enumerate(settings.plates2):
-				col.prop(settings, 'plates2', index=i, text="Plate",
-						 icon="FILE_TICK" if settings.plates2[i] else "RADIOBUT_OFF", toggle=True)
-			col = row.column(align=True)
-			col.alignment = 'EXPAND'
-			for i, p in enumerate(settings.bricks2):
-				col.prop(settings, 'bricks2', index=i, text="Brick",
-						 icon="FILE_TICK" if settings.bricks2[i] else "RADIOBUT_OFF", toggle=True)
+			row.alignment = 'LEFT'
+			row.prop(settings, "brick_selection", icon="TRIA_DOWN" if settings.brick_selection else "TRIA_RIGHT",
+					 text="Options", emboss=False)
 
-			row = box.row(align=True)
-			row.separator()
-			col = row.column(align=True)
-			col.alignment = 'RIGHT'
-			col.label(text="4x4")
-			col.label(text="3x3")
-			col = row.column(align=True)
-			col.alignment = 'EXPAND'
-			for i, p in enumerate(settings.platesLarger):
-				col.prop(settings, 'platesLarger', index=i, text="Plate",
-						 icon="FILE_TICK" if settings.platesLarger[i] else "RADIOBUT_OFF", toggle=True)
+			if settings.brick_selection:
+				row = box.row(align=True)
+				row.separator()
+				col = row.column(align=True)
+				col.alignment = 'RIGHT'
+				col.label(text="1x8")
+				col.label(text="1x6")
+				col.label(text="1x4")
+				col.label(text="1x3")
+				col.label(text="1x2")
+				col.label(text="1x1")
+				col = row.column(align=True)
+				col.alignment = 'EXPAND'
+				for i, p in enumerate(settings.plates1):
+					col.prop(settings, 'plates1', index=i, text="Plate",
+							 icon="FILE_TICK" if settings.plates1[i] else "RADIOBUT_OFF", toggle=True)
+
+				col = row.column(align=True)
+				col.alignment = 'EXPAND'
+				for i, p in enumerate(settings.bricks1):
+					col.prop(settings, 'bricks1', index=i, text="Brick",
+							 icon="FILE_TICK" if settings.bricks1[i] else "RADIOBUT_OFF", toggle=True)
+
+				row = box.row(align=True)
+				row.separator()
+				col = row.column(align=True)
+				col.alignment = 'RIGHT'
+				col.label(text="2x8")
+				col.label(text="2x6")
+				col.label(text="2x4")
+				col.label(text="2x3")
+				col.label(text="2x2")
+				col = row.column(align=True)
+				col.alignment = 'EXPAND'
+				for i, p in enumerate(settings.plates2):
+					col.prop(settings, 'plates2', index=i, text="Plate",
+							 icon="FILE_TICK" if settings.plates2[i] else "RADIOBUT_OFF", toggle=True)
+				col = row.column(align=True)
+				col.alignment = 'EXPAND'
+				for i, p in enumerate(settings.bricks2):
+					col.prop(settings, 'bricks2', index=i, text="Brick",
+							 icon="FILE_TICK" if settings.bricks2[i] else "RADIOBUT_OFF", toggle=True)
+
+				row = box.row(align=True)
+				row.separator()
+				col = row.column(align=True)
+				col.alignment = 'RIGHT'
+				col.label(text="4x4")
+				col.label(text="3x3")
+				col = row.column(align=True)
+				col.alignment = 'EXPAND'
+				for i, p in enumerate(settings.platesLarger):
+					col.prop(settings, 'platesLarger', index=i, text="Plate",
+							 icon="FILE_TICK" if settings.platesLarger[i] else "RADIOBUT_OFF", toggle=True)
 
 		row = box.row()
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")

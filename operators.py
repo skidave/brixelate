@@ -8,6 +8,15 @@ from .settings_utils import getSettings
 from .lego_utils import legoData
 from .brixelate_funcs import brixelateFunctions
 
+#TODO use toggles for base dims (save on computation time)
+#TODO add nano block and duplo intersections
+#TODO add nano block and duplo brick packing
+#TODO check objects against brick dims (smaller than a duplo brick for example)
+
+#TODO add studs and holes
+#TODO boolean intersection to 'remove' lego
+#TODO split 'shell' to make printable
+
 class simpleBrixelate(bpy.types.Operator):
 	'''Creates a LEGO assembly of the model'''
 	bl_idname = "tool.simple_brixelate"
@@ -17,8 +26,9 @@ class simpleBrixelate(bpy.types.Operator):
 	@classmethod
 	def poll(self, context):
 		# TODO prevent running if no bricks selected
-		if len(context.selected_objects) == 1 and context.object.type == 'MESH':
-			return True
+		if getSettings().use_lego or getSettings().use_nano or getSettings().use_duplo:
+			if len(context.selected_objects) == 1 and context.object.type == 'MESH':
+				return True
 
 	def execute(self, context):
 		object_selected = context.selected_objects[0]
@@ -44,8 +54,9 @@ class experimentation(bpy.types.Operator):
 
 	@classmethod
 	def poll(self, context):
-		if len(context.selected_objects) == 1 and context.selected_objects[0].type == 'MESH':
-			return True
+		if getSettings().use_lego or getSettings().use_nano or getSettings().use_duplo:
+			if len(context.selected_objects) == 1 and context.selected_objects[0].type == 'MESH':
+				return True
 
 	def execute(self, context):
 		start = time.time()

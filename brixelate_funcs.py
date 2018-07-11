@@ -4,6 +4,7 @@ import math
 from mathutils import Vector
 import numpy as np
 import time
+import datetime
 import copy
 from operator import itemgetter
 
@@ -12,9 +13,16 @@ from .mesh_utils import (getVertices,
 						 rayInside)
 
 from .lego_utils import legoData
+from .settings_utils import getSettings
+from .file_utils import (csv_header,
+						 csv_write)
+
 
 class brixelateFunctions():
-	def brixelate(self, scene, object_selected, use_shell_as_bounds, bricks_to_use, **kwargs):
+	def brixelate(self, scene, object_selected, **kwargs):
+
+		use_shell_as_bounds = getSettings().use_shell_as_bounds
+		bricks_to_use = legoData().listOfBricksToUse()
 
 		xyz_bricks, start_point = self.brickBounds(scene, object_selected)
 		xbricks = math.ceil(xyz_bricks[0] / 2)
@@ -99,8 +107,7 @@ class brixelateFunctions():
 																   object_selected.dimensions[2])
 				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
 				brick_count_string = '{:d},'.format(brick_count)
-				#stats_string = '{:f},{:f},{:f},'.format(dist_mean, dist_std, sample_size)
-
+				# stats_string = '{:f},{:f},{:f},'.format(dist_mean, dist_std, sample_size)
 
 				sorted(used_bricks_dict)
 				bricks_used_string = ''
@@ -148,16 +155,20 @@ class brixelateFunctions():
 
 	def brickPacking(self, scene, bricks_array, start_point, bricks_to_use, **kwargs):
 		start_time = time.time()
-		lego_data = scene.lego_data
 
 		bricks = bricks_array
 		opt_bricks = copy.copy(bricks_array) * -1.0
 
 		directional_list_of_bricks = []
 		for brick_name in bricks_to_use:
-			b0 = int(brick_name[1])
-			b1 = int(brick_name[3])
-			b2 = 1 if 'Plate' in brick_name else 3
+			if 'Duplo' in brick_name:
+				b0 = int(brick_name[1]) * 2
+				b1 = int(brick_name[3]) * 2
+				b2 = 6
+			else:
+				b0 = int(brick_name[1])
+				b1 = int(brick_name[3])
+				b2 = 1 if 'Plate' in brick_name else 3
 			brick = [b0, b1, b2]
 			directional_list_of_bricks.append(brick)
 			if brick[0] != brick[1]:
@@ -282,3 +293,39 @@ class brixelateFunctions():
 
 		return bm
 
+
+def experimentation(context):
+	now = datetime.datetime.now()
+	start_string = "Experiment started: {:%H:%M:%S}".format(now)
+	print(start_string)
+
+	csv_file_name = csv_header(now)
+
+	use_shell_as_bounds = getSettings().use_shell_as_bounds
+	bricks_to_use = legoData().listOfBricksToUse()
+	max_range = getSettings().max_range
+	end_scale = getSettings().scale_factor
+
+	scales = [1]
+	for num in range(max_range - 1):
+		interp_scale = ((num + 1) / (max_range - 1)) * (end_scale - 1) + 1
+		scales.append(interp_scale)
+
+	object_selected = context.selected_objects[0]
+	base_dims = copy.copy(object_selected.dimensions)
+
+	count = 1
+	number_objects = len(scales)
+	for scale in scales:
+		new_dims = base_dims * scale
+		object_selected.dimensions = new_dims
+
+		progress_string = "Running on {:d} of {:d} objects".format(count, number_objects)
+		print(progress_string)
+
+		output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True)
+		csv_write(csv_file_name, output_data)
+
+		count += 1
+
+	return number_objects

@@ -84,18 +84,6 @@ class BrixelPanel(bpy.types.Panel):
 					col.prop(settings, 'bricks2', index=i, text="Brick",
 							 icon="FILE_TICK" if settings.bricks2[i] else "RADIOBUT_OFF", toggle=True)
 
-				row = box.row(align=True)
-				row.separator()
-				col = row.column(align=True)
-				col.alignment = 'RIGHT'
-				col.label(text="4x4")
-				col.label(text="3x3")
-				col = row.column(align=True)
-				col.alignment = 'EXPAND'
-				for i, p in enumerate(settings.platesLarger):
-					col.prop(settings, 'platesLarger', index=i, text="Plate",
-							 icon="FILE_TICK" if settings.platesLarger[i] else "RADIOBUT_OFF", toggle=True)
-
 		row = box.row()
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
 

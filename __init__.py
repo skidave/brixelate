@@ -3,7 +3,7 @@ bl_info = {
 	"description": "Generates a LEGO assembly from a mesh object",
 	"author": "David Mathias",
 	"version": (0, 0, 9),
-	"blender": (2, 78, 0),
+	"blender": (2, 79, 0),
 	"location": "Tools",
 	"warning": "",  # used for warning icon and text in addons panel
 	"wiki_url": "",
@@ -15,14 +15,14 @@ from bpy.utils import register_class, unregister_class
 
 from .operators import (resetBrixelate,
 						simpleBrixelate,
-						experimentation
+						experimentationBrixelate
 						)
 from .ui_panel import BrixelPanel
 from .panel_settings import PanelSettings
 
 classes = (
 	simpleBrixelate,
-	experimentation,
+	experimentationBrixelate,
 
 	resetBrixelate,
 

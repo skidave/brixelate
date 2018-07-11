@@ -2,6 +2,9 @@ import bpy
 from mathutils import Vector
 import random
 
+from .settings_utils import getSettings
+
+
 class legoData():
 	# 1x1 LEGO plate dimensions
 	plate_w = 8.00
@@ -23,10 +26,6 @@ class legoData():
 		[3, 2, 1],
 		[2, 2, 1]]
 
-	list_of_Largerplates = [
-		[4, 4, 1],
-		[3, 3, 1]]
-
 	list_of_1bricks = [
 		[8, 1, 3],
 		[6, 1, 3],
@@ -42,18 +41,32 @@ class legoData():
 		[3, 2, 3],
 		[2, 2, 3]]
 
-	def brickName(self, brick):
-		if brick[2] == 3:
-			type = 'Brick'
-		else:
-			type = 'Plate'
+	list_of_duplo = [
+		[4, 4, 6],
+	]
 
-		if brick[0] > brick[1]:
-			first = brick[0]
-			second = brick[1]
+	def brickName(self, brick):
+
+		height = brick[2]
+		width = brick[0]
+		depth = brick[1]
+
+		if height == 6:
+			type = 'Duplo'
+			first = int(width / 2)
+			second = int(depth / 2)
 		else:
-			first = brick[1]
-			second = brick[0]
+			if height == 3:
+				type = 'Brick'
+			else:
+				type = 'Plate'
+
+			if width > depth:
+				first = width
+				second = depth
+			else:
+				first = depth
+				second = width
 
 		name = '_{0}x{1}_{2}'.format(first, second, type)
 
@@ -109,29 +122,30 @@ class legoData():
 		object.data.materials[0].diffuse_color = (random.uniform(0.2, 1), 0, 0)
 
 	def listOfBricksToUse(self):
-		settings = bpy.context.scene.my_settings
+		settings = getSettings()
 		toUse = []
 		add = toUse.append
 
-		for j, p in enumerate(settings.bricks2):
-			if p:
-				add(self.list_of_2bricks[j])
+		if settings.use_lego:
+			for j, p in enumerate(settings.bricks2):
+				if p:
+					add(self.list_of_2bricks[j])
 
-		for j, p in enumerate(settings.bricks1):
-			if p:
-				add(self.list_of_1bricks[j])
+			for j, p in enumerate(settings.bricks1):
+				if p:
+					add(self.list_of_1bricks[j])
 
-		for j, p in enumerate(settings.platesLarger):
-			if p:
-				add(self.list_of_Largerplates[j])
+			for j, p in enumerate(settings.plates2):
+				if p:
+					add(self.list_of_2plates[j])
 
-		for j, p in enumerate(settings.plates2):
-			if p:
-				add(self.list_of_2plates[j])
+			for j, p in enumerate(settings.plates1):
+				if p:
+					add(self.list_of_1plates[j])
 
-		for j, p in enumerate(settings.plates1):
-			if p:
-				add(self.list_of_1plates[j])
+		if settings.use_duplo:
+			for j, p in enumerate(self.list_of_duplo):
+				add(self.list_of_duplo[j])
 
 		brick_names_dict = {}
 		for brick in toUse:

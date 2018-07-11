@@ -32,8 +32,6 @@ def allPlates(self, context):
 		settings.plates1[i] = val
 	for i, p in enumerate(settings.plates2):
 		settings.plates2[i] = val
-	for i, p in enumerate(settings.platesLarger):
-		settings.platesLarger[i] = val
 	return None
 
 

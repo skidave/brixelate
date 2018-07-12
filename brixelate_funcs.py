@@ -110,7 +110,6 @@ class brixelateFunctions():
 				bricks_used_string = ''
 
 				for k in sorted(used_bricks_dict.keys()):
-					print(used_bricks_dict[k])
 					string = str(used_bricks_dict[k]['count']) + ','
 					bricks_used_string += string
 
@@ -158,14 +157,19 @@ class brixelateFunctions():
 
 		directional_list_of_bricks = []
 		for brick_name in bricks_to_use:
-			brick = bricks_to_use[brick_name]['size']
+			try:
+				brick = bricks_to_use[brick_name]['size'].tolist()
+			except:
+				brick = bricks_to_use[brick_name]['size']
 
 			directional_list_of_bricks.append(brick)
-			if brick[0] != brick[1]:
-				piece_alt_dir = [brick[1], brick[0], brick[2]]
-				directional_list_of_bricks.append(piece_alt_dir)
+			# if brick[0] != brick[1]:
+			# 	piece_alt_dir = [brick[1], brick[0], brick[2]]
+			# 	directional_list_of_bricks.append(piece_alt_dir)
 
 		directional_list_of_bricks.sort(key=itemgetter(2, 1, 0), reverse=True)
+
+		print(directional_list_of_bricks)
 
 		w, d, h = legoData.getDims()
 		addNewBrickAtPoint = legoData().addNewBrickAtPoint
@@ -183,59 +187,66 @@ class brixelateFunctions():
 			for y in range(y_array):
 				for x in range(x_array):
 					if bricks[z, y, x] == 1 and opt_bricks[z, y, x] == -1:
-						for piece in directional_list_of_bricks:
+						for base_brick in directional_list_of_bricks:
+							directions = [base_brick]
+							if base_brick[0] != base_brick[1]:
+								base_brick90 = [base_brick[1], base_brick[0], base_brick[2]]
+								directions.append(base_brick90)
 
-							count = 0
-							next_piece = False
-							max_count = piece[0] * piece[1] * piece[2]
-							p_list = []
-							p_append = p_list.append
+							for piece in directions:
+								print(piece)
 
-							for px in range(piece[0]):
-								if next_piece:
-									break
-								for py in range(piece[1]):
+								count = 0
+								next_piece = False
+								max_count = piece[0] * piece[1] * piece[2]
+								p_list = []
+								p_append = p_list.append
+
+								for px in range(piece[0]):
 									if next_piece:
 										break
-									for pz in range(piece[2]):
-										next_z = z + pz
-										next_y = y + py
-										next_x = x + px
-										if next_z < z_array and next_y < y_array and next_x < x_array:
-											if bricks[next_z, next_y, next_x] == 1 and opt_bricks[
-												next_z, next_y, next_x] == -1:
-												count += 1
-												p_append([next_z, next_y, next_x])
+									for py in range(piece[1]):
+										if next_piece:
+											break
+										for pz in range(piece[2]):
+											next_z = z + pz
+											next_y = y + py
+											next_x = x + px
+											if next_z < z_array and next_y < y_array and next_x < x_array:
+												if bricks[next_z, next_y, next_x] == 1 and opt_bricks[
+													next_z, next_y, next_x] == -1:
+													count += 1
+													p_append([next_z, next_y, next_x])
+												else:
+													next_piece = True
+													break
 											else:
 												next_piece = True
 												break
-										else:
-											next_piece = True
-											break
 
-							if count == max_count:
+								if count == max_count:
 
-								brick_name = legoData().brickName(piece)
-								used_bricks_dict[brick_name]['count'] += 1
+									brick_name = legoData().brickName(piece)
+									used_bricks_dict[brick_name]['count'] += 1
 
-								for p in p_list:
-									opt_bricks[p[0], p[1], p[2]] = brick_num
-								height = p_list[max_count - 1][0] - p_list[0][0] + 1
-								depth = p_list[max_count - 1][1] - p_list[0][1] + 1
-								width = p_list[max_count - 1][2] - p_list[0][2] + 1
+									for p in p_list:
+										opt_bricks[p[0], p[1], p[2]] = brick_num
+									height = p_list[max_count - 1][0] - p_list[0][0] + 1
+									depth = p_list[max_count - 1][1] - p_list[0][1] + 1
+									width = p_list[max_count - 1][2] - p_list[0][2] + 1
 
-								x_pos = ((width - 1) / 2) * w
-								y_pos = ((depth - 1) / 2) * d
-								z_pos = ((height - 1) / 2) * h
+									x_pos = ((width - 1) / 2) * w
+									y_pos = ((depth - 1) / 2) * d
+									z_pos = ((height - 1) / 2) * h
 
-								translation = Vector(
-									((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
-								translation += Vector((x_pos, y_pos, z_pos))
-								if 'add_bricks' in kwargs:
-									if kwargs['add_bricks']:
-										addNewBrickAtPoint(translation, width, depth, height, brick_num)
-								brick_num += 1
-								volume_count += width * depth * height
+									translation = Vector(
+										((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
+									translation += Vector((x_pos, y_pos, z_pos))
+									if 'add_bricks' in kwargs:
+										if kwargs['add_bricks']:
+											addNewBrickAtPoint(translation, width, depth, height, brick_num, brick_name)
+									brick_num += 1
+									volume_count += width * depth * height
 
 		lego_volume = volume_count * w * d * h
 

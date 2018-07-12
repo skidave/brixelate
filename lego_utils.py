@@ -7,7 +7,6 @@ from .settings_utils import getSettings
 
 
 class legoData():
-
 	list_of_1plates = [
 		[8, 1, 1],
 		[6, 1, 1],
@@ -43,7 +42,7 @@ class legoData():
 	]
 
 	list_of_nano = [
-		[1,1,1],
+		[1, 1, 1],
 	]
 
 	@staticmethod
@@ -66,10 +65,8 @@ class legoData():
 
 		return w, d, h
 
-
-
 	# function to create a brick with width, depth and height at a point
-	def addNewBrickAtPoint(self, point, width, depth, height, number):
+	def addNewBrickAtPoint(self, point, width, depth, height, number, name):
 		w, d, h = self.getDims()
 
 		Vertices = \
@@ -102,7 +99,8 @@ class legoData():
 		bpy.context.scene.objects.link(new_brick)
 
 		# Change brick colour
-		self.randomiseColour(new_brick)
+		brick_type = name[0]
+		self.randomiseColour(new_brick, brick_type)
 
 		new_brick.select = True
 		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
@@ -110,11 +108,18 @@ class legoData():
 		new_brick.location = point
 
 	@staticmethod
-	def randomiseColour(object):
+	def randomiseColour(object, brick_type):
+		if brick_type == 'D':
+			brick_colour = (random.uniform(0.2, 1), 0, 0)
+		elif brick_type == 'N':
+			brick_colour = (0, random.uniform(0.2, 1), 0)
+		else:
+			brick_colour = (0, 0, random.uniform(0.2, 1))
+
 		mat_name_string = "Colour " + object.name
 		colour = bpy.data.materials.new(name=mat_name_string)
 		object.data.materials.append(colour)
-		object.data.materials[0].diffuse_color = (random.uniform(0.2, 1), 0, 0)
+		object.data.materials[0].diffuse_color = brick_colour
 
 	def listOfBricksToUse(self):
 		settings = getSettings()
@@ -142,16 +147,20 @@ class legoData():
 			if settings.use_lego or settings.use_nano:
 				scale_factor = np.array([4, 4, 6])
 				temp_toUse = np.array(toUse)
+
 				duplo_to_use = np.array(self.list_of_duplo)
 
 				duplo_to_use = duplo_to_use * scale_factor
-				toUse = np.append(temp_toUse, duplo_to_use, axis=0)
+				try:
+					toUse = np.append(temp_toUse, duplo_to_use, axis=0)
+				except:
+					toUse = duplo_to_use
 			else:
 				toUse = self.list_of_duplo
 
 		if settings.use_nano:
 			if settings.use_lego or settings.use_duplo:
-				scale_factor = np.array([2,2,1])
+				scale_factor = np.array([2, 2, 1])
 				temp_toUse = np.array(toUse)
 				nano_to_use = np.array(self.list_of_nano)
 
@@ -160,11 +169,9 @@ class legoData():
 			else:
 				toUse = self.list_of_nano
 
-
-
 		brick_names_dict = {}
 		for brick in toUse:
-			sub_dict = {'count':0, 'size': brick}
+			sub_dict = {'count': 0, 'size': brick}
 			brick_names_dict[self.brickName(brick)] = sub_dict
 
 		return brick_names_dict
@@ -177,14 +184,14 @@ class legoData():
 		depth = brick[1]
 
 		if height == 6:
-			type = 'D'
+			brick_type = 'D'
 			first = int(width / 2)
 			second = int(depth / 2)
 		else:
 			if height == 3:
-				type = 'B'
+				brick_type = 'B'
 			else:
-				type = 'P'
+				brick_type = 'P'
 
 			if width > depth:
 				first = width
@@ -193,6 +200,17 @@ class legoData():
 				first = depth
 				second = width
 
-		name = '{2}_{0}x{1}'.format(first, second, type)
+		if getSettings().use_nano:
+			if depth == 1 and width == 1:
+				brick_type = 'N'
+			else:
+				first = int(first / 2)
+				second = int(second / 2)
+		else:
+			if getSettings().use_duplo and not getSettings().use_lego:
+				if depth == 1 and width == 1:
+					brick_type = 'D'
+
+		name = '{2}_{0}x{1}'.format(first, second, brick_type)
 
 		return name

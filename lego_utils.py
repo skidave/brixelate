@@ -6,10 +6,6 @@ from .settings_utils import getSettings
 
 
 class legoData():
-	# 1x1 LEGO plate dimensions
-	plate_w = 8.00
-	plate_d = 8.00
-	plate_h = 3.20
 
 	list_of_1plates = [
 		[8, 1, 1],
@@ -45,38 +41,31 @@ class legoData():
 		[4, 4, 6],
 	]
 
-	def brickName(self, brick):
+	@staticmethod
+	def getDims():
 
-		height = brick[2]
-		width = brick[0]
-		depth = brick[1]
+		types = [getSettings().use_nano, getSettings().use_lego, getSettings().use_duplo]
 
-		if height == 6:
-			type = 'Duplo'
-			first = int(width / 2)
-			second = int(depth / 2)
+		if types[0]:
+			w = 8.00 / 2
+			d = 8.00 / 2
+			h = 3.20
+		elif types[1]:
+			w = 8.00
+			d = 8.00
+			h = 3.20
 		else:
-			if height == 3:
-				type = 'Brick'
-			else:
-				type = 'Plate'
+			w = 8.00 * 4
+			d = 8.00 * 4
+			h = 3.20 * 6
 
-			if width > depth:
-				first = width
-				second = depth
-			else:
-				first = depth
-				second = width
+		return w, d, h
 
-		name = '_{0}x{1}_{2}'.format(first, second, type)
 
-		return name
 
 	# function to create a brick with width, depth and height at a point
 	def addNewBrickAtPoint(self, point, width, depth, height, number):
-		w = self.plate_w
-		d = self.plate_d
-		h = self.plate_h
+		w, d, h = self.getDims()
 
 		Vertices = \
 			[
@@ -115,7 +104,8 @@ class legoData():
 		new_brick.select = False
 		new_brick.location = point
 
-	def randomiseColour(self, object):
+	@staticmethod
+	def randomiseColour(object):
 		mat_name_string = "Colour " + object.name
 		colour = bpy.data.materials.new(name=mat_name_string)
 		object.data.materials.append(colour)
@@ -149,6 +139,35 @@ class legoData():
 
 		brick_names_dict = {}
 		for brick in toUse:
-			brick_names_dict[self.brickName(brick)] = 0
+			sub_dict = {'count':0, 'size': brick}
+			brick_names_dict[self.brickName(brick)] = sub_dict
 
 		return brick_names_dict
+
+	@staticmethod
+	def brickName(brick):
+
+		height = brick[2]
+		width = brick[0]
+		depth = brick[1]
+
+		if height == 6:
+			type = 'D'
+			first = int(width / 2)
+			second = int(depth / 2)
+		else:
+			if height == 3:
+				type = 'B'
+			else:
+				type = 'P'
+
+			if width > depth:
+				first = width
+				second = depth
+			else:
+				first = depth
+				second = width
+
+		name = '{2}_{0}x{1}'.format(first, second, type)
+
+		return name

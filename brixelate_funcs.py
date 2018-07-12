@@ -29,9 +29,7 @@ class brixelateFunctions():
 		ybricks = math.ceil(xyz_bricks[1] / 2)
 		zbricks = math.ceil(xyz_bricks[2] / 2)
 
-		w = legoData.plate_w
-		d = legoData.plate_d
-		h = legoData.plate_h
+		w, d, h = legoData.getDims()
 
 		bricks_array = np.zeros((zbricks * 2 + 1, ybricks * 2 + 1, xbricks * 2 + 1))
 
@@ -109,6 +107,7 @@ class brixelateFunctions():
 				brick_count_string = '{:d},'.format(brick_count)
 				# stats_string = '{:f},{:f},{:f},'.format(dist_mean, dist_std, sample_size)
 
+				#TODO will need fixing to get the brick count out.
 				sorted(used_bricks_dict)
 				bricks_used_string = ''
 				for i in used_bricks_dict.values():
@@ -124,9 +123,7 @@ class brixelateFunctions():
 			return None
 
 	def brickBounds(self, scene, object_selected):
-		w = legoData.plate_w
-		d = legoData.plate_d
-		h = legoData.plate_h
+		w, d, h = legoData.getDims()
 
 		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 		vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
@@ -161,15 +158,8 @@ class brixelateFunctions():
 
 		directional_list_of_bricks = []
 		for brick_name in bricks_to_use:
-			if 'Duplo' in brick_name:
-				b0 = int(brick_name[1]) * 2
-				b1 = int(brick_name[3]) * 2
-				b2 = 6
-			else:
-				b0 = int(brick_name[1])
-				b1 = int(brick_name[3])
-				b2 = 1 if 'Plate' in brick_name else 3
-			brick = [b0, b1, b2]
+			brick = bricks_to_use[brick_name]['size']
+
 			directional_list_of_bricks.append(brick)
 			if brick[0] != brick[1]:
 				piece_alt_dir = [brick[1], brick[0], brick[2]]
@@ -177,9 +167,7 @@ class brixelateFunctions():
 
 		directional_list_of_bricks.sort(key=itemgetter(2, 1, 0), reverse=True)
 
-		w = legoData.plate_w
-		d = legoData.plate_d
-		h = legoData.plate_h
+		w, d, h = legoData.getDims()
 		addNewBrickAtPoint = legoData().addNewBrickAtPoint
 
 		z_array, y_array, x_array = bricks.shape[0], bricks.shape[1], bricks.shape[2]
@@ -228,7 +216,7 @@ class brixelateFunctions():
 							if count == max_count:
 
 								brick_name = legoData().brickName(piece)
-								used_bricks_dict[brick_name] += 1
+								used_bricks_dict[brick_name]['count'] += 1
 
 								for p in p_list:
 									opt_bricks[p[0], p[1], p[2]] = brick_num
@@ -261,6 +249,7 @@ class brixelateFunctions():
 
 		return lego_volume, used_bricks_dict, brick_count
 
+	@staticmethod
 	def bmesh_copy_from_object(obj, transform=True, triangulate=True, apply_modifiers=False):
 		"""
 		Returns a transformed, triangulated copy of the mesh
@@ -301,8 +290,6 @@ def experimentation(context):
 
 	csv_file_name = csv_header(now)
 
-	use_shell_as_bounds = getSettings().use_shell_as_bounds
-	bricks_to_use = legoData().listOfBricksToUse()
 	max_range = getSettings().max_range
 	end_scale = getSettings().scale_factor
 

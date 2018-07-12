@@ -92,8 +92,8 @@ class brixelateFunctions():
 
 		object_selected.select = True
 
-		scene.my_settings.show_hide_model = True
-		scene.my_settings.show_hide_lego = True
+		getSettings().show_hide_model = True
+		getSettings().show_hide_lego = True
 
 		if 'output' in kwargs:
 			if kwargs['output']:
@@ -105,13 +105,13 @@ class brixelateFunctions():
 																   object_selected.dimensions[2])
 				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
 				brick_count_string = '{:d},'.format(brick_count)
-				# stats_string = '{:f},{:f},{:f},'.format(dist_mean, dist_std, sample_size)
 
-				#TODO will need fixing to get the brick count out.
-				sorted(used_bricks_dict)
+				#sorted(used_bricks_dict)
 				bricks_used_string = ''
-				for i in used_bricks_dict.values():
-					string = str(i) + ','
+
+				for k in sorted(used_bricks_dict.keys()):
+					print(used_bricks_dict[k])
+					string = str(used_bricks_dict[k]['count']) + ','
 					bricks_used_string += string
 
 				output_data = name_string + bounded_string + dimensions_string + volume_string + brick_count_string + bricks_used_string + '\n'

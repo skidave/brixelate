@@ -12,8 +12,8 @@ def csv_header(time_now):
 	output_file = open(csv_file_name, 'w')
 
 	brick_string = ''
-	for name in bricks_to_use:
-		brick_string = brick_string + name + ','
+	for k in sorted(bricks_to_use.keys()):
+		brick_string = brick_string + k + ','
 
 	csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + '\n'
 	output_file.write(csv_header)

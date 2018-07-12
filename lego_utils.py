@@ -1,6 +1,7 @@
 import bpy
 from mathutils import Vector
 import random
+import numpy as np
 
 from .settings_utils import getSettings
 
@@ -38,7 +39,11 @@ class legoData():
 		[2, 2, 3]]
 
 	list_of_duplo = [
-		[4, 4, 6],
+		[1, 1, 1],
+	]
+
+	list_of_nano = [
+		[1,1,1],
 	]
 
 	@staticmethod
@@ -134,8 +139,28 @@ class legoData():
 					add(self.list_of_1plates[j])
 
 		if settings.use_duplo:
-			for j, p in enumerate(self.list_of_duplo):
-				add(self.list_of_duplo[j])
+			if settings.use_lego or settings.use_nano:
+				scale_factor = np.array([4, 4, 6])
+				temp_toUse = np.array(toUse)
+				duplo_to_use = np.array(self.list_of_duplo)
+
+				duplo_to_use = duplo_to_use * scale_factor
+				toUse = np.append(temp_toUse, duplo_to_use, axis=0)
+			else:
+				toUse = self.list_of_duplo
+
+		if settings.use_nano:
+			if settings.use_lego or settings.use_duplo:
+				scale_factor = np.array([2,2,1])
+				temp_toUse = np.array(toUse)
+				nano_to_use = np.array(self.list_of_nano)
+
+				toUse = temp_toUse * scale_factor
+				toUse = np.append(toUse, nano_to_use, axis=0)
+			else:
+				toUse = self.list_of_nano
+
+
 
 		brick_names_dict = {}
 		for brick in toUse:

@@ -333,5 +333,6 @@ def experimentation(context):
 
 			ci += 1
 		cj += 1
+	print('\n')
 
 	return number_objects, number_scales

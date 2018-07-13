@@ -49,19 +49,25 @@ class experimentationBrixelate(bpy.types.Operator):
 	@classmethod
 	def poll(self, context):
 		if getSettings().use_lego or getSettings().use_nano or getSettings().use_duplo:
-			if len(context.selected_objects) == 1 and context.selected_objects[0].type == 'MESH':
-				return True
+			if len(context.selected_objects) > 0:
+				number_objects = len(context.selected_objects)
+				mesh_objs = 0
+				for obj in context.selected_objects:
+					if obj.type == 'MESH':
+						mesh_objs += 1
+				if mesh_objs == number_objects:
+					return True
 
 	def execute(self, context):
 		start = time.time()
 
-		number_objects = experimentation(context)
+		number_objects, number_scales = experimentation(context)
 
 		end = time.time()
 		timer = end - start
 
 		self.report({"INFO"},
-					"Experiment run on {:d} objects in {:f} seconds".format(number_objects, timer))
+					"\nSimulation run on {:d} objects {:d} times in {:f} seconds\n".format(number_objects, number_scales, timer))
 		return {'FINISHED'}
 
 	def invoke(self, context, event):

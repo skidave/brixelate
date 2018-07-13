@@ -169,8 +169,6 @@ class brixelateFunctions():
 
 		directional_list_of_bricks.sort(key=itemgetter(2, 1, 0), reverse=True)
 
-		print(directional_list_of_bricks)
-
 		w, d, h = legoData.getDims()
 		addNewBrickAtPoint = legoData().addNewBrickAtPoint
 
@@ -194,7 +192,6 @@ class brixelateFunctions():
 								directions.append(base_brick90)
 
 							for piece in directions:
-								print(piece)
 
 								count = 0
 								next_piece = False
@@ -309,21 +306,32 @@ def experimentation(context):
 		interp_scale = ((num + 1) / (max_range - 1)) * (end_scale - 1) + 1
 		scales.append(interp_scale)
 
-	object_selected = context.selected_objects[0]
-	base_dims = copy.copy(object_selected.dimensions)
+	objects = context.selected_objects
+	number_objects = len(objects)
+	cj = 1
+	for object_selected in objects:
+		name = object_selected.name
 
-	count = 1
-	number_objects = len(scales)
-	for scale in scales:
-		new_dims = base_dims * scale
-		object_selected.dimensions = new_dims
-
-		progress_string = "Running on {:d} of {:d} objects".format(count, number_objects)
+		progress_string = "\n=======================\n" \
+						  "Starting {:d} of {:d} objects\n" \
+						  "=======================".format(cj, number_objects, name)
 		print(progress_string)
 
-		output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True)
-		csv_write(csv_file_name, output_data)
+		base_dims = copy.copy(object_selected.dimensions)
 
-		count += 1
+		ci = 1
+		number_scales = len(scales)
+		for scale in scales:
+			new_dims = base_dims * scale
+			object_selected.dimensions = new_dims
 
-	return number_objects
+			progress_string = "Running {:d} of {:d} on {}".format(ci, number_scales, name)
+			print(progress_string)
+
+			output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True)
+			csv_write(csv_file_name, output_data)
+
+			ci += 1
+		cj += 1
+
+	return number_objects, number_scales

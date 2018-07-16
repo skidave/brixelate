@@ -308,6 +308,7 @@ def experimentation(context):
 
 	objects = context.selected_objects
 	number_objects = len(objects)
+	number_scales = len(scales)
 	cj = 1
 	for object_selected in objects:
 		name = object_selected.name
@@ -320,7 +321,7 @@ def experimentation(context):
 		base_dims = copy.copy(object_selected.dimensions)
 
 		ci = 1
-		number_scales = len(scales)
+
 		for scale in scales:
 			new_dims = base_dims * scale
 			object_selected.dimensions = new_dims

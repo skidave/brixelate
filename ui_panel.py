@@ -97,6 +97,16 @@ class BrixelPanel(bpy.types.Panel):
 		box.operator("tool.brixelate_experiments", text="Run Experiments", icon="FILE_TICK")
 
 		layout.separator()
+		box = layout.box()
+		box.label("Ratio", icon="SORTSIZE")
+		row = box.row()
+		row.prop(settings, "start_ratio")
+		row.prop(settings, "ratio_step")
+		row.prop(settings, "end_ratio")
+
+		#box.operator("tool.brixelate_experiments", text="Run Experiments", icon="FILE_TICK")
+
+		layout.separator()
 		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
 
 		if len(scene.objects) > 0:

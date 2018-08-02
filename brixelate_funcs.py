@@ -24,12 +24,18 @@ class brixelateFunctions():
 		use_shell_as_bounds = getSettings().use_shell_as_bounds
 		bricks_to_use = legoData().listOfBricksToUse()
 
-		xyz_bricks, start_point = self.brickBounds(scene, object_selected)
+		if 'ratio' in kwargs:
+			ratio = kwargs['ratio']
+			brick_size = ratio
+		else:
+			brick_size = legoData.getDims()
+
+		xyz_bricks, start_point = self.brickBounds(scene, object_selected, brick_size)
 		xbricks = math.ceil(xyz_bricks[0] / 2)
 		ybricks = math.ceil(xyz_bricks[1] / 2)
 		zbricks = math.ceil(xyz_bricks[2] / 2)
 
-		w, d, h = legoData.getDims()
+		w, d, h = brick_size
 
 		bricks_array = np.zeros((zbricks * 2 + 1, ybricks * 2 + 1, xbricks * 2 + 1))
 
@@ -75,7 +81,14 @@ class brixelateFunctions():
 		else:
 			add_bricks = True
 
-		lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use,
+		if 'ratio' in kwargs:
+			ratio = kwargs['ratio']
+			brick_vol = np.prod(ratio)
+
+			brick_count = int(np.sum(bricks_array))
+			lego_volume = brick_count*brick_vol
+		else:
+			lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use,
 																	   add_bricks=add_bricks)
 		# print(lego_volume)
 		# print(used_bricks_dict)
@@ -106,12 +119,15 @@ class brixelateFunctions():
 				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
 				brick_count_string = '{:d},'.format(brick_count)
 
-				#sorted(used_bricks_dict)
-				bricks_used_string = ''
+				if 'ratio' in kwargs:
+					bricks_used_string = ''
+				else:
+					#sorted(used_bricks_dict)
+					bricks_used_string = ''
 
-				for k in sorted(used_bricks_dict.keys()):
-					string = str(used_bricks_dict[k]['count']) + ','
-					bricks_used_string += string
+					for k in sorted(used_bricks_dict.keys()):
+						string = str(used_bricks_dict[k]['count']) + ','
+						bricks_used_string += string
 
 				output_data = name_string + bounded_string + dimensions_string + volume_string + brick_count_string + bricks_used_string + '\n'
 
@@ -121,8 +137,8 @@ class brixelateFunctions():
 		else:
 			return None
 
-	def brickBounds(self, scene, object_selected):
-		w, d, h = legoData.getDims()
+	def brickBounds(self, scene, object_selected, brick_size):
+		w, d, h = brick_size
 
 		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 		vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
@@ -337,3 +353,48 @@ def experimentation(context):
 	print('\n')
 
 	return number_objects, number_scales
+
+
+def ratio(context):
+	now = datetime.datetime.now()
+	start_string = "Experiment started: {:%H:%M:%S}".format(now)
+	print(start_string)
+
+	csv_file_name = csv_header(now, ratio=True)
+
+	object_selected = context.selected_objects[0]
+
+	start = getSettings().start_ratio
+	end = getSettings().end_ratio
+	number = getSettings().ratio_step
+
+	ratios = [start]
+	for num in range(number - 1):
+		interp_scale = ((num + 1) / (number - 1)) * (end-start) + start
+		ratios.append(interp_scale)
+
+	base_brick = [1.0,1.0,0.4]
+
+	bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+	vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
+	x_vec = vertices[4] - vertices[0]
+	y_vec = vertices[3] - vertices[0]
+	z_vec = vertices[1] - vertices[0]
+
+	x_dim = round(x_vec.length, 4)
+	y_dim = round(y_vec.length, 4)
+	z_dim = round(z_vec.length, 4)
+
+
+
+	for ratio in ratios:
+		brick_size = [b * x_dim * ratio for b in base_brick]
+		print(brick_size)
+		output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True, ratio=brick_size)
+		output_data = output_data.rstrip()
+		output_data = output_data + str(ratio) + '\n'
+		csv_write(csv_file_name, output_data)
+
+
+
+	return None

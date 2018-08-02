@@ -3,7 +3,7 @@ import time
 
 from .settings_utils import getSettings
 from .lego_utils import legoData
-from .brixelate_funcs import brixelateFunctions, experimentation
+from .brixelate_funcs import brixelateFunctions, experimentation, ratio
 
 #TODO add studs and holes
 #TODO boolean intersection to 'remove' lego
@@ -65,6 +65,36 @@ class experimentationBrixelate(bpy.types.Operator):
 
 		self.report({"INFO"},
 					"Simulation run on {:d} objects {:d} times in {:f} seconds\n".format(number_objects, number_scales, timer))
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+class ratioBrixelate(bpy.types.Operator):
+	'''Generates Brixelate ratios for selected object'''
+	bl_idname = "tool.brixelate_ratio"
+	bl_label = "Brixelate Ratio"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if len(context.selected_objects) > 0:
+			number_objects = len(context.selected_objects)
+			mesh_objs = 0
+			for obj in context.selected_objects:
+				if obj.type == 'MESH':
+					mesh_objs += 1
+			if mesh_objs == number_objects:
+				return True
+
+	def execute(self, context):
+		start = time.time()
+
+		ratio(context)
+
+		end = time.time()
+		timer = end - start
+
 		return {'FINISHED'}
 
 	def invoke(self, context, event):

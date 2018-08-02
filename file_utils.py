@@ -1,9 +1,11 @@
-import bpy
 import os
+
+import bpy
 
 from .lego_utils import legoData
 
-def csv_header(time_now):
+
+def csv_header(time_now, **kwargs):
 	bricks_to_use = legoData().listOfBricksToUse()
 
 	filepath = bpy.data.filepath
@@ -15,11 +17,18 @@ def csv_header(time_now):
 	for k in sorted(bricks_to_use.keys()):
 		brick_string = brick_string + k + ','
 
-	csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + '\n'
+	extra_header = ''
+	if 'ratio' in kwargs:
+		if kwargs['ratio']:
+			extra_header = 'ratio'
+			brick_string = ''
+
+	csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + extra_header + '\n'
 	output_file.write(csv_header)
 	output_file.close()
 
 	return csv_file_name
+
 
 def csv_write(csv_file_name, line_data):
 	output_file = open(csv_file_name, 'a')

@@ -15,7 +15,8 @@ from bpy.utils import register_class, unregister_class
 
 from .operators import (resetBrixelate,
 						simpleBrixelate,
-						experimentationBrixelate
+						experimentationBrixelate,
+						ratioBrixelate
 						)
 from .ui_panel import BrixelPanel
 from .panel_settings import PanelSettings
@@ -24,6 +25,7 @@ from .panel_settings import PanelSettings
 classes = (
 	simpleBrixelate,
 	experimentationBrixelate,
+	ratioBrixelate,
 
 	resetBrixelate,
 

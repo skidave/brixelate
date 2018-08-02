@@ -104,7 +104,7 @@ class BrixelPanel(bpy.types.Panel):
 		row.prop(settings, "ratio_step")
 		row.prop(settings, "end_ratio")
 
-		#box.operator("tool.brixelate_experiments", text="Run Experiments", icon="FILE_TICK")
+		box.operator("tool.brixelate_ratio", text="Run Ratios", icon="FILE_TICK")
 
 		layout.separator()
 		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")

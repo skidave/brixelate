@@ -69,7 +69,7 @@ class PanelSettings(bpy.types.PropertyGroup):
 	)
 
 	start_ratio = FloatProperty(
-		name='Start Ratio',
+		name='Start',
 		description='Brick to Object Ratio',
 		default=0.05,
 		min=0.001,
@@ -77,7 +77,7 @@ class PanelSettings(bpy.types.PropertyGroup):
 	)
 
 	end_ratio = FloatProperty(
-		name='End Ratio',
+		name='End',
 		description='Brick to Object Ratio',
 		default=0.5,
 		min=0.0011,
@@ -85,7 +85,7 @@ class PanelSettings(bpy.types.PropertyGroup):
 	)
 
 	ratio_step = IntProperty(
-		name='Numb',
+		name='Num',
 		description='Number of ratios to test',
 		default=10,
 		min=2,

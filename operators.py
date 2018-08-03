@@ -90,7 +90,7 @@ class ratioBrixelate(bpy.types.Operator):
 	def execute(self, context):
 		start = time.time()
 
-		ratio(context)
+		ratio(context, method='vol')
 
 		end = time.time()
 		timer = end - start

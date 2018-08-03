@@ -1,17 +1,17 @@
-import bpy
-import bmesh
-import math
-from mathutils import Vector
-import numpy as np
 import time
 import datetime
 import copy
+import math
 from operator import itemgetter
+
+import bpy
+import bmesh
+from mathutils import Vector
+import numpy as np
 
 from .mesh_utils import (getVertices,
 						 getEdges,
 						 rayInside)
-
 from .lego_utils import legoData
 from .settings_utils import getSettings
 from .file_utils import (csv_header,
@@ -30,14 +30,16 @@ class brixelateFunctions():
 		else:
 			brick_size = legoData.getDims()
 
-		xyz_bricks, start_point = self.brickBounds(scene, object_selected, brick_size)
-		xbricks = math.ceil(xyz_bricks[0] / 2)
-		ybricks = math.ceil(xyz_bricks[1] / 2)
-		zbricks = math.ceil(xyz_bricks[2] / 2)
+		xyz_bricks, centre_start_point = self.brickBounds(scene, object_selected, brick_size)
+		xbricks = int(math.ceil(xyz_bricks[0] / 2))
+		ybricks = int(math.ceil(xyz_bricks[1] / 2))
+		zbricks = int(math.ceil(xyz_bricks[2] / 2))
 
 		w, d, h = brick_size
 
-		bricks_array = np.zeros((zbricks * 2 + 1, ybricks * 2 + 1, xbricks * 2 + 1))
+		offset_start_point = centre_start_point + Vector((w / 2, d / 2, h / 2))
+		start_points = [centre_start_point, offset_start_point]
+		start_keys = ['centre', 'offset']
 
 		object_selected.select = False
 
@@ -45,35 +47,39 @@ class brixelateFunctions():
 		object_as_bmesh.from_mesh(object_selected.data)
 		object_as_bmesh.faces.ensure_lookup_table()
 
-		internal_vertices = []
-		boundary_vertices = []
+		temp_dict = {}
+		for i, start_point in enumerate(start_points):
+			add = 1
+			bricks_array = np.zeros((zbricks * 2 + add, ybricks * 2 + add, xbricks * 2 + add))
 
-		start_time = time.time()
-		for x in range(-xbricks, xbricks + 1):
-			for y in range(-ybricks, ybricks + 1):
-				for z in range(-zbricks, zbricks + 1):
-					translation = Vector((x * w, y * d, z * h)) + start_point
-					vertices, centre = getVertices(translation, w, d, h)
-					edges = getEdges(vertices)
+			for x in range(-xbricks, xbricks + add):
+				for y in range(-ybricks, ybricks + add):
+					for z in range(-zbricks, zbricks + add):
+						translation = Vector((x * w, y * d, z * h)) + start_point
+						vertices, centre = getVertices(translation, w, d, h)
+						edges = getEdges(vertices)
 
-					edgeIntersects, centreIntersect = rayInside(edges, centre, object_selected)
+						edgeIntersects, centreIntersect = rayInside(edges, centre, object_selected)
 
-					if centreIntersect and sum(edgeIntersects) == 0:
-						internal_vertices.extend(vertices)
+						# Brick Array assignment
+						if use_shell_as_bounds:
+							if centreIntersect and sum(edgeIntersects) == 0:
+								bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
+						else:
+							if centreIntersect or sum(edgeIntersects) > 0:
+								bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 
-					if centreIntersect or sum(edgeIntersects) > 0:
-						boundary_vertices.extend(vertices)
+			temp_dict[start_keys[i]] = {'start_point': start_point, 'count': int(np.sum(bricks_array)),
+										'array': bricks_array}
 
-					# Brick Array assignment
-					if use_shell_as_bounds:
-						if centreIntersect and sum(edgeIntersects) == 0:
-							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
-					else:
-						if centreIntersect or sum(edgeIntersects) > 0:
-							bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
-
-		end_time = time.time()
-		testing_time = (end_time - start_time)
+		if temp_dict['offset']['count'] > temp_dict['centre']['count']:
+			start_point = temp_dict['offset']['start_point']
+			bricks_array = temp_dict['offset']['array']
+			print('Using offset')
+		else:
+			start_point = temp_dict['centre']['start_point']
+			bricks_array = temp_dict['centre']['array']
+			print('Using centre')
 
 		if 'output' in kwargs:
 			if kwargs['output']:
@@ -86,14 +92,12 @@ class brixelateFunctions():
 			brick_vol = np.prod(ratio)
 
 			brick_count = int(np.sum(bricks_array))
-			lego_volume = brick_count*brick_vol
+			lego_volume = brick_count * brick_vol
 		else:
-			lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point, bricks_to_use,
-																	   add_bricks=add_bricks)
-		# print(lego_volume)
-		# print(used_bricks_dict)
+			lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point,
+																		   bricks_to_use,
+																		   add_bricks=add_bricks)
 
-		# bm = self.bmesh_copy_from_object(object_selected, apply_modifiers=True)
 		bm = bmesh.new()
 		bm.from_mesh(object_selected.data)
 		bmesh.ops.triangulate(bm, faces=bm.faces)
@@ -122,7 +126,7 @@ class brixelateFunctions():
 				if 'ratio' in kwargs:
 					bricks_used_string = ''
 				else:
-					#sorted(used_bricks_dict)
+					# sorted(used_bricks_dict)
 					bricks_used_string = ''
 
 					for k in sorted(used_bricks_dict.keys()):
@@ -179,9 +183,9 @@ class brixelateFunctions():
 				brick = bricks_to_use[brick_name]['size']
 
 			directional_list_of_bricks.append(brick)
-			# if brick[0] != brick[1]:
-			# 	piece_alt_dir = [brick[1], brick[0], brick[2]]
-			# 	directional_list_of_bricks.append(piece_alt_dir)
+		# if brick[0] != brick[1]:
+		# 	piece_alt_dir = [brick[1], brick[0], brick[2]]
+		# 	directional_list_of_bricks.append(piece_alt_dir)
 
 		directional_list_of_bricks.sort(key=itemgetter(2, 1, 0), reverse=True)
 
@@ -355,7 +359,7 @@ def experimentation(context):
 	return number_objects, number_scales
 
 
-def ratio(context):
+def ratio(context, method):
 	now = datetime.datetime.now()
 	start_string = "Experiment started: {:%H:%M:%S}".format(now)
 	print(start_string)
@@ -364,16 +368,21 @@ def ratio(context):
 
 	object_selected = context.selected_objects[0]
 
+	bm = bmesh.new()
+	bm.from_mesh(object_selected.data)
+	bmesh.ops.triangulate(bm, faces=bm.faces)
+	object_volume = bm.calc_volume()
+
 	start = getSettings().start_ratio
 	end = getSettings().end_ratio
 	number = getSettings().ratio_step
 
 	ratios = [start]
 	for num in range(number - 1):
-		interp_scale = ((num + 1) / (number - 1)) * (end-start) + start
+		interp_scale = ((num + 1) / (number - 1)) * (end - start) + start
 		ratios.append(interp_scale)
 
-	base_brick = [1.0,1.0,0.4]
+	base_brick = [1.0, 1.0, 0.4]
 
 	bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
 	vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
@@ -385,16 +394,32 @@ def ratio(context):
 	y_dim = round(y_vec.length, 4)
 	z_dim = round(z_vec.length, 4)
 
-
-
 	for ratio in ratios:
-		brick_size = [b * x_dim * ratio for b in base_brick]
-		print(brick_size)
+		if method is "dim":
+			brick_size = [b * x_dim * ratio for b in base_brick]
+		elif method is "vol":
+			brick_vol = object_volume * ratio
+			print(object_volume)
+			print(brick_vol)
+			A = base_brick[0]
+			B = base_brick[2]
+			C = -brick_vol
+
+			det = B ** 2 - 4 * A * C
+
+			if det < 0:
+				raise ValueError('Determinant less than 0!')
+			else:
+				sol1 = (-B - math.sqrt(det)) / (2 * A)
+				sol2 = (-B + math.sqrt(det)) / (2 * A)
+
+				brick_size = [sol2, sol2, sol2*B]
+				print(brick_size)
+		else:
+			raise ValueError("Method '{}' not recognised".format(str(method)))
 		output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True, ratio=brick_size)
 		output_data = output_data.rstrip()
 		output_data = output_data + str(ratio) + '\n'
 		csv_write(csv_file_name, output_data)
-
-
 
 	return None

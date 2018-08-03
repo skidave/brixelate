@@ -72,7 +72,7 @@ class PanelSettings(bpy.types.PropertyGroup):
 		name='Start',
 		description='Brick to Object Ratio',
 		default=0.05,
-		min=0.001,
+		min=0.00001,
 		max=0.9999
 	)
 
@@ -80,7 +80,7 @@ class PanelSettings(bpy.types.PropertyGroup):
 		name='End',
 		description='Brick to Object Ratio',
 		default=0.5,
-		min=0.0011,
+		min=0.0001,
 		max=1.0
 	)
 

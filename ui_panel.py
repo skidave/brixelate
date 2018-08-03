@@ -101,9 +101,10 @@ class BrixelPanel(bpy.types.Panel):
 		box.label("Ratio", icon="SORTSIZE")
 		row = box.row()
 		row.prop(settings, "start_ratio")
-		row.prop(settings, "ratio_step")
-		row.prop(settings, "end_ratio")
 
+		row.prop(settings, "end_ratio")
+		row = box.row()
+		row.prop(settings, "ratio_step")
 		box.operator("tool.brixelate_ratio", text="Run Ratios", icon="FILE_TICK")
 
 		layout.separator()

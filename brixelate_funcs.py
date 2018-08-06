@@ -37,9 +37,14 @@ class brixelateFunctions():
 
 		w, d, h = brick_size
 
-		offset_start_point = centre_start_point + Vector((w / 2, d / 2, h / 2))
-		start_points = [centre_start_point, offset_start_point]
-		start_keys = ['centre', 'offset']
+		wd_offset = centre_start_point + Vector((w / 2, d / 2, 0))
+		wdh_offset = centre_start_point + Vector((w / 2, d / 2, h / 2))
+		w_offset = centre_start_point + Vector((w / 2, 0, 0))
+		wh_offset = centre_start_point + Vector((w / 2, 0, h / 2))
+		d_offset = centre_start_point + Vector((0, d / 2, 0))
+		dh_offset = centre_start_point + Vector((0, d / 2, h / 2))
+		start_points = [centre_start_point, wd_offset, wdh_offset, w_offset, wh_offset, d_offset, dh_offset]
+
 
 		object_selected.select = False
 
@@ -69,17 +74,29 @@ class brixelateFunctions():
 							if centreIntersect or sum(edgeIntersects) > 0:
 								bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 
-			temp_dict[start_keys[i]] = {'start_point': start_point, 'count': int(np.sum(bricks_array)),
+			temp_dict[i] = {'start_point': start_point, 'count': int(np.sum(bricks_array)),
 										'array': bricks_array}
 
-		if temp_dict['offset']['count'] > temp_dict['centre']['count']:
-			start_point = temp_dict['offset']['start_point']
-			bricks_array = temp_dict['offset']['array']
-			print('Using offset')
-		else:
-			start_point = temp_dict['centre']['start_point']
-			bricks_array = temp_dict['centre']['array']
-			print('Using centre')
+		to_use = 0
+		temp_count = 0
+		for key in temp_dict:
+			# print("key: {}".format(key))
+			# print("touse: {}".format(to_use))
+			key_count = temp_dict[key]['count']
+			if key_count > temp_count:
+				temp_count = key_count
+				to_use = key
+
+		start_point = temp_dict[to_use]['start_point']
+		bricks_array = temp_dict[to_use]['array']
+		# if temp_dict['offset']['count'] > temp_dict['centre']['count']:
+		# 	start_point = temp_dict['offset']['start_point']
+		# 	bricks_array = temp_dict['offset']['array']
+		# 	print('Using offset')
+		# else:
+		# 	start_point = temp_dict['centre']['start_point']
+		# 	bricks_array = temp_dict['centre']['array']
+		# 	print('Using centre')
 
 		if 'output' in kwargs:
 			if kwargs['output']:
@@ -413,7 +430,7 @@ def ratio(context, method):
 				sol1 = (-B - math.sqrt(det)) / (2 * A)
 				sol2 = (-B + math.sqrt(det)) / (2 * A)
 
-				brick_size = [sol2, sol2, sol2*B]
+				brick_size = [sol2, sol2, sol2 * B]
 				print(brick_size)
 		else:
 			raise ValueError("Method '{}' not recognised".format(str(method)))

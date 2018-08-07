@@ -45,7 +45,6 @@ class brixelateFunctions():
 		dh_offset = centre_start_point + Vector((0, d / 2, h / 2))
 		start_points = [centre_start_point, wd_offset, wdh_offset, w_offset, wh_offset, d_offset, dh_offset]
 
-
 		object_selected.select = False
 
 		object_as_bmesh = bmesh.new()
@@ -75,7 +74,7 @@ class brixelateFunctions():
 								bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
 
 			temp_dict[i] = {'start_point': start_point, 'count': int(np.sum(bricks_array)),
-										'array': bricks_array}
+							'array': bricks_array}
 
 		to_use = 0
 		temp_count = 0
@@ -383,60 +382,74 @@ def ratio(context, method):
 
 	csv_file_name = csv_header(now, ratio=True)
 
-	object_selected = context.selected_objects[0]
-
-	bm = bmesh.new()
-	bm.from_mesh(object_selected.data)
-	bmesh.ops.triangulate(bm, faces=bm.faces)
-	object_volume = bm.calc_volume()
-
 	start = getSettings().start_ratio
 	end = getSettings().end_ratio
-	number = getSettings().ratio_step
+	number_ratios = getSettings().ratio_step
 
 	ratios = [start]
-	for num in range(number - 1):
-		interp_scale = ((num + 1) / (number - 1)) * (end - start) + start
+	for num in range(number_ratios - 1):
+		interp_scale = ((num + 1) / (number_ratios - 1)) * (end - start) + start
 		ratios.append(interp_scale)
 
 	base_brick = [1.0, 1.0, 0.4]
 
-	bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
-	vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
-	x_vec = vertices[4] - vertices[0]
-	y_vec = vertices[3] - vertices[0]
-	z_vec = vertices[1] - vertices[0]
+	objects = context.selected_objects
+	number_objects = len(objects)
 
-	x_dim = round(x_vec.length, 4)
-	y_dim = round(y_vec.length, 4)
-	z_dim = round(z_vec.length, 4)
+	cj = 1
+	for object_selected in objects:
+		name = object_selected.name
 
-	for ratio in ratios:
-		if method is "dim":
-			brick_size = [b * x_dim * ratio for b in base_brick]
-		elif method is "vol":
-			brick_vol = object_volume * ratio
-			print(object_volume)
-			print(brick_vol)
-			A = base_brick[0]
-			B = base_brick[2]
-			C = -brick_vol
+		progress_string = "\n=======================\n" \
+						  "Starting {:d} of {:d} objects\n" \
+						  "=======================".format(cj, number_objects)
+		print(progress_string)
 
-			det = B ** 2 - 4 * A * C
+		bm = bmesh.new()
+		bm.from_mesh(object_selected.data)
+		bmesh.ops.triangulate(bm, faces=bm.faces)
+		object_volume = bm.calc_volume()
 
-			if det < 0:
-				raise ValueError('Determinant less than 0!')
+		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+		vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
+		x_vec = vertices[4] - vertices[0]
+		y_vec = vertices[3] - vertices[0]
+		z_vec = vertices[1] - vertices[0]
+
+		x_dim = round(x_vec.length, 4)
+		y_dim = round(y_vec.length, 4)
+		z_dim = round(z_vec.length, 4)
+
+		ci = 1
+		for ratio in ratios:
+			if method is "dim":
+				brick_size = [b * x_dim * ratio for b in base_brick]
+			elif method is "vol":
+				brick_vol = object_volume * ratio
+				A = base_brick[0]
+				B = base_brick[2]
+				C = -brick_vol
+
+				det = B ** 2 - 4 * A * C
+
+				if det < 0:
+					raise ValueError('Determinant less than 0!')
+				else:
+					sol1 = (-B - math.sqrt(det)) / (2 * A)
+					sol2 = (-B + math.sqrt(det)) / (2 * A)
+
+					brick_size = [sol2, sol2, sol2 * B]
+					#print(brick_size)
 			else:
-				sol1 = (-B - math.sqrt(det)) / (2 * A)
-				sol2 = (-B + math.sqrt(det)) / (2 * A)
+				raise ValueError("Method '{}' not recognised".format(str(method)))
 
-				brick_size = [sol2, sol2, sol2 * B]
-				print(brick_size)
-		else:
-			raise ValueError("Method '{}' not recognised".format(str(method)))
-		output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True, ratio=brick_size)
-		output_data = output_data.rstrip()
-		output_data = output_data + str(ratio) + '\n'
-		csv_write(csv_file_name, output_data)
+			progress_string = "Running {:d} of {:d} on {}".format(ci, number_ratios, name)
+			print(progress_string)
+			output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True, ratio=brick_size)
+			output_data = output_data.rstrip()
+			output_data = output_data + str(ratio) + '\n'
+			csv_write(csv_file_name, output_data)
+			ci += 1
+		cj += 1
 
-	return None
+	return number_objects, number_ratios

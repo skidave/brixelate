@@ -1,13 +1,15 @@
-import bpy
 import time
+
+import bpy
 
 from .settings_utils import getSettings
 from .lego_utils import legoData
 from .brixelate_funcs import brixelateFunctions, experimentation, ratio
 
-#TODO add studs and holes
-#TODO boolean intersection to 'remove' lego
-#TODO split 'shell' to make printable
+
+# TODO add studs and holes
+# TODO boolean intersection to 'remove' lego
+# TODO split 'shell' to make printable
 
 class simpleBrixelate(bpy.types.Operator):
 	'''Creates a LEGO assembly of the model'''
@@ -64,11 +66,13 @@ class experimentationBrixelate(bpy.types.Operator):
 		timer = end - start
 
 		self.report({"INFO"},
-					"Simulation run on {:d} objects {:d} times in {:f} seconds\n".format(number_objects, number_scales, timer))
+					"Simulation run on {:d} objects {:d} times in {:f} seconds\n".format(number_objects, number_scales,
+																						 timer))
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
 		return self.execute(context)
+
 
 class ratioBrixelate(bpy.types.Operator):
 	'''Generates Brixelate ratios for selected object'''
@@ -90,15 +94,21 @@ class ratioBrixelate(bpy.types.Operator):
 	def execute(self, context):
 		start = time.time()
 
-		ratio(context, method='vol')
+		number_objects, number_ratios = ratio(context, method='vol')
 
 		end = time.time()
 		timer = end - start
+
+		self.report({"INFO"},
+					"\nRatios Experiment run on {:d} objects {:d} times in {:f} seconds\n".format(number_objects,
+																								number_ratios,
+																								timer))
 
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
 		return self.execute(context)
+
 
 class resetBrixelate(bpy.types.Operator):
 	'''Removes all LEGO bricks'''

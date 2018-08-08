@@ -1,5 +1,7 @@
 import bpy
-from mathutils import Vector
+from mathutils import Vector, Quaternion
+import numpy as np
+
 
 def getVertices(pos, w, d, h):
 	vertices = \
@@ -90,3 +92,34 @@ def rayInside(edges, centre, model):
 		centreIntersect = False
 
 	return edgeIntersects, centreIntersect
+
+
+def get_quats(number_points):
+	number_points = number_points - 1
+	indices = np.arange(0, number_points, dtype=float)# + 0.5
+
+	theta = np.arccos(1 - 2 * indices / number_points)
+	phi = (np.pi * (1 + 5 ** 0.5) * indices)
+
+	x, y, z = np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)
+
+	quats = []
+	for i in range(len(x)):
+		up_vec = Vector((0, 0, 1))
+		point_vec = Vector((x[i], y[i], z[i]))
+
+		q = up_vec.rotation_difference(point_vec)  # returns quaternions
+		quats.append(q)
+
+	base_q = Quaternion((1,0,0,0))
+
+	quats = [base_q] + quats
+	quats = [q.normalized() for q in quats]
+
+	quats_diff = [base_q] + [a.rotation_difference(b) for a,b in zip(quats[:-1], quats[1:])]
+	quats_diff = [q.normalized() for q in quats_diff]
+
+	diff_to_orig = quats[-1].rotation_difference(base_q).inverted()
+	#diff_to_orig = quats[-1]
+
+	return quats, quats_diff, diff_to_orig

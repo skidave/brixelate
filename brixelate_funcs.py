@@ -9,13 +9,10 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 
-from .mesh_utils import (getVertices,
-						 getEdges,
-						 rayInside)
+from .mesh_utils import getVertices, getEdges, rayInside, get_quats
 from .lego_utils import legoData
 from .settings_utils import getSettings
-from .file_utils import (csv_header,
-						 csv_write)
+from .file_utils import csv_header, csv_write
 
 
 class brixelateFunctions():
@@ -380,7 +377,7 @@ def ratio(context, method):
 	start_string = "Experiment started: {:%H:%M:%S}".format(now)
 	print(start_string)
 
-	csv_file_name = csv_header(now, ratio=True)
+	csv_file_name = csv_header(now, ratio=True, rotation=True)
 
 	start = getSettings().start_ratio
 	end = getSettings().end_ratio
@@ -390,6 +387,9 @@ def ratio(context, method):
 	for num in range(number_ratios - 1):
 		interp_scale = ((num + 1) / (number_ratios - 1)) * (end - start) + start
 		ratios.append(interp_scale)
+
+	spin = getSettings().spin_object
+	number_points = getSettings().number_points
 
 	base_brick = [1.0, 1.0, 0.4]
 
@@ -410,7 +410,7 @@ def ratio(context, method):
 		bmesh.ops.triangulate(bm, faces=bm.faces)
 		object_volume = bm.calc_volume()
 
-		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 		vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
 		x_vec = vertices[4] - vertices[0]
 		y_vec = vertices[3] - vertices[0]
@@ -420,36 +420,69 @@ def ratio(context, method):
 		y_dim = round(y_vec.length, 4)
 		z_dim = round(z_vec.length, 4)
 
-		ci = 1
-		for ratio in ratios:
-			if method is "dim":
-				brick_size = [b * x_dim * ratio for b in base_brick]
-			elif method is "vol":
-				brick_vol = object_volume * ratio
-				A = base_brick[0]
-				B = base_brick[2]
-				C = -brick_vol
+		quats, diffs, diff_to_orig = get_quats(number_points)
+		pi = 1
+		if not spin:
+			diffs = [diffs[0]]
+			quats = [quats[0]]
 
-				det = B ** 2 - 4 * A * C
+		# for diff in diffs:
+		for quat in quats:
 
-				if det < 0:
-					raise ValueError('Determinant less than 0!')
-				else:
-					sol1 = (-B - math.sqrt(det)) / (2 * A)
-					sol2 = (-B + math.sqrt(det)) / (2 * A)
+			object_selected.rotation_mode = "QUATERNION"
+			object_selected.rotation_quaternion = quat  # diff
+			object_selected.rotation_mode = "XYZ"
 
-					brick_size = [sol2, sol2, sol2 * B]
-					#print(brick_size)
-			else:
-				raise ValueError("Method '{}' not recognised".format(str(method)))
-
-			progress_string = "Running {:d} of {:d} on {}".format(ci, number_ratios, name)
+			rot_x, rot_y, rot_z = object_selected.rotation_euler
+			rots = [np.rad2deg(rot_x), np.rad2deg(rot_y), np.rad2deg(rot_z)]
+			rot_string = ','.join(str(rots))
+			# print(rot_string)
+			# bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+			progress_string = "------\nPosition {:d} of {:d}\n------\nX: {: .1f}\tY: {: .1f}\tZ: {: .1f}".format(pi, number_points,
+																				 rots[0], rots[1], rots[2])
 			print(progress_string)
-			output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True, ratio=brick_size)
-			output_data = output_data.rstrip()
-			output_data = output_data + str(ratio) + '\n'
-			csv_write(csv_file_name, output_data)
-			ci += 1
-		cj += 1
 
-	return number_objects, number_ratios
+			ci = 1
+			for ratio in ratios:
+				if method is "dim":
+					brick_size = [b * x_dim * ratio for b in base_brick]
+				elif method is "vol":
+					brick_vol = object_volume * ratio
+					A = base_brick[0]
+					B = base_brick[2]
+					C = -brick_vol
+
+					det = B ** 2 - 4 * A * C
+
+					if det < 0:
+						raise ValueError('Determinant less than 0!')
+					else:
+						sol1 = (-B - math.sqrt(det)) / (2 * A)
+						sol2 = (-B + math.sqrt(det)) / (2 * A)
+
+						brick_size = [sol2, sol2, sol2 * B]
+				# print(brick_size)
+				else:
+					raise ValueError("Method '{}' not recognised".format(str(method)))
+
+				progress_string = "Running {:d} of {:d} on {}".format(ci, number_ratios, name)
+				print(progress_string)
+				ratio_string = str(ratio) + ','
+				output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True,
+															 ratio=brick_size)
+				output_data = output_data.rstrip()
+				output_data = output_data + ratio_string + rot_string + '\n'
+
+				csv_write(csv_file_name, output_data)
+
+				ci += 1
+			print('\n')
+			cj += 1
+			pi += 1
+
+		# object_selected.rotation_mode = "QUATERNION"
+		# object_selected.rotation_quaternion = diff_to_orig
+		object_selected.rotation_euler = (0, 0, 0)
+		object_selected.rotation_mode = "XYZ"
+	# bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
+	return number_objects, number_ratios, number_points

@@ -94,15 +94,16 @@ class ratioBrixelate(bpy.types.Operator):
 	def execute(self, context):
 		start = time.time()
 
-		number_objects, number_ratios = ratio(context, method='vol')
+		number_objects, number_ratios, number_points = ratio(context, method='vol')
 
 		end = time.time()
 		timer = end - start
 
 		self.report({"INFO"},
-					"\nRatios Experiment run on {:d} objects {:d} times in {:f} seconds\n".format(number_objects,
-																								number_ratios,
-																								timer))
+					"\nRatios Experiment run on {:d} objects in {:d} positions over {:d} ratios in {:f} seconds\n".format(
+						number_objects, number_points,
+						number_ratios,
+						timer))
 
 		return {'FINISHED'}
 
@@ -136,6 +137,45 @@ class resetBrixelate(bpy.types.Operator):
 
 		end_time = time.time()
 		self.report({"INFO"}, "Reset finished in {:5.3f} seconds".format(end_time - start_time))
+
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
+class spinTest(bpy.types.Operator):
+	'''Spins objects'''
+	bl_idname = "tool.spin_test"
+	bl_label = "Brixelate Spin"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if len(context.selected_objects) == 1:
+			if context.selected_objects[0].type == 'MESH':
+				return True
+
+	def execute(self, context):
+		from .mesh_utils import get_quats
+
+		object_selected = context.selected_objects[0]
+		quats, diffs, _ = get_quats(getSettings().number_points)
+
+		for q in quats:
+			me = object_selected.data  # use current object's data
+			me_copy = me.copy()
+
+			ob = bpy.data.objects.new("Mesh Copy", me_copy)
+			ob.location = object_selected.location
+
+			ob.rotation_mode = "QUATERNION"
+			ob.rotation_quaternion = q
+
+			ob.rotation_mode = "XYZ"
+
+			context.scene.objects.link(ob)
+		context.scene.update()
 
 		return {'FINISHED'}
 

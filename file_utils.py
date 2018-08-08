@@ -20,8 +20,12 @@ def csv_header(time_now, **kwargs):
 	extra_header = ''
 	if 'ratio' in kwargs:
 		if kwargs['ratio']:
-			extra_header = 'ratio'
+			extra_header += 'ratio,'
 			brick_string = ''
+
+	if 'rotation' in kwargs:
+		if kwargs['rotation']:
+			extra_header +='rot_x,rot_y,rot_z,'
 
 	csv_header = 'name,bounded,x_dim,y_dim,z_dim,object_volume,lego_volume,percent_volume,brick_count,' + brick_string + extra_header + '\n'
 	output_file.write(csv_header)

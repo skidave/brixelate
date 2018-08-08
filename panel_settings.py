@@ -91,3 +91,13 @@ class PanelSettings(bpy.types.PropertyGroup):
 		min=2,
 		max=500
 	)
+
+	spin_object = BoolProperty(name="Spin Object", default=False)
+
+	number_points = IntProperty(
+		name='Number of Points',
+		description='Number of Points to rotate to',
+		default=20,
+		min=1,
+		max=500
+	)

@@ -92,7 +92,7 @@ class BrixelPanel(bpy.types.Panel):
 		box.label("Experiments", icon="FCURVE")
 		row = box.row()
 		row.prop(settings, "max_range")
-		row.prop(settings, "scale_factor")
+		row.prop(settings, "scale_factor", slider=True)
 
 		box.operator("tool.brixelate_experiments", text="Run Experiments", icon="FILE_TICK")
 
@@ -104,11 +104,21 @@ class BrixelPanel(bpy.types.Panel):
 
 		row.prop(settings, "end_ratio")
 		row = box.row()
-		row.prop(settings, "ratio_step")
+		row.prop(settings, "ratio_step", text="Number of Steps")
+		row = box.row()
+		row.prop(settings, "spin_object")
+		if settings.spin_object:
+			row.prop(settings, "number_points", slider=True)
+
+
+
 		box.operator("tool.brixelate_ratio", text="Run Ratios", icon="FILE_TICK")
 
 		layout.separator()
 		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
+
+		layout.separator()
+		layout.operator("tool.spin_test", text="TEST")
 
 		if len(scene.objects) > 0:
 

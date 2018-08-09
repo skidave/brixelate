@@ -157,25 +157,38 @@ class spinTest(bpy.types.Operator):
 				return True
 
 	def execute(self, context):
-		from .mesh_utils import get_quats
+		from .mesh_utils import get_angles
+		from mathutils import Vector
 
 		object_selected = context.selected_objects[0]
-		quats, diffs, _ = get_quats(getSettings().number_points)
+		num = getSettings().number_points
+		theta, phi= get_angles(getSettings().number_points)
 
-		for q in quats:
+		phi.sort()
+		for i in range(len(phi)):
 			me = object_selected.data  # use current object's data
 			me_copy = me.copy()
-
 			ob = bpy.data.objects.new("Mesh Copy", me_copy)
-			ob.location = object_selected.location
 
-			ob.rotation_mode = "QUATERNION"
-			ob.rotation_quaternion = q
 
-			ob.rotation_mode = "XYZ"
+			# ob.location = object_selected.location + Vector((250*(i+1), 0, 0))#Vector((x[i], y[i], z[i]))
+			# ob.rotation_euler = (phi[i], 0, 0)  # pitch
+
+			# ob.location = object_selected.location + Vector((0,0, 100 * (i+1)))  # Vector((x[i], y[i], z[i]))
+			# ob.rotation_euler = (0, 0, phi[i]) # yaw
+
+			ob.location = object_selected.location + Vector((0, 200*(i+1), 0))  # Vector((x[i], y[i], z[i]))
+			ob.rotation_euler = (0, phi[i], 0) # roll
 
 			context.scene.objects.link(ob)
-		context.scene.update()
+			ob.select=True
+			context.scene.objects.active = ob
+			bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+			ob.show_bounds=True
+			ob.select=False
+
+
+		bpy.context.scene.objects.active = object_selected
 
 		return {'FINISHED'}
 

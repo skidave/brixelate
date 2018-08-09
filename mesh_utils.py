@@ -94,32 +94,28 @@ def rayInside(edges, centre, model):
 	return edgeIntersects, centreIntersect
 
 
-def get_quats(number_points):
-	number_points = number_points - 1
-	indices = np.arange(0, number_points, dtype=float)# + 0.5
+def get_angles(number_points):
+	#number_points = number_points * 4
+	indices = np.arange(0, number_points, dtype=float)
 
 	theta = np.arccos(1 - 2 * indices / number_points)
-	phi = (np.pi * (1 + 5 ** 0.5) * indices)
+	phi = (np.pi * (1 + 5 ** 0.5) * indices) % (2 * np.pi)
 
 	x, y, z = np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)
 
-	quats = []
-	for i in range(len(x)):
-		up_vec = Vector((0, 0, 1))
-		point_vec = Vector((x[i], y[i], z[i]))
+	t_n = []
+	p_n = []
+	for i in range(len(theta)):
+		t = theta[i]
+		p = phi[i]
 
-		q = up_vec.rotation_difference(point_vec)  # returns quaternions
-		quats.append(q)
+		if t > 0 and t <= np.pi and p > 0 and p <= np.pi / 2:
+			t_n.append(t)
+			p_n.append(p)
 
-	base_q = Quaternion((1,0,0,0))
+	phi = p_n
+	theta = t_n
 
-	quats = [base_q] + quats
-	quats = [q.normalized() for q in quats]
+	phi_s = np.linspace(0, np.pi / 2, number_points + 1)[1:]
 
-	quats_diff = [base_q] + [a.rotation_difference(b) for a,b in zip(quats[:-1], quats[1:])]
-	quats_diff = [q.normalized() for q in quats_diff]
-
-	diff_to_orig = quats[-1].rotation_difference(base_q).inverted()
-	#diff_to_orig = quats[-1]
-
-	return quats, quats_diff, diff_to_orig
+	return theta, phi_s

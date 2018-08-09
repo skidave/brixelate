@@ -9,7 +9,7 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 
-from .mesh_utils import getVertices, getEdges, rayInside, get_quats
+from .mesh_utils import getVertices, getEdges, rayInside, get_angles
 from .lego_utils import legoData
 from .settings_utils import getSettings
 from .file_utils import csv_header, csv_write
@@ -27,7 +27,7 @@ class brixelateFunctions():
 		else:
 			brick_size = legoData.getDims()
 
-		xyz_bricks, centre_start_point = self.brickBounds(scene, object_selected, brick_size)
+		xyz_bricks, centre_start_point, dimensions = self.brickBounds(scene, object_selected, brick_size)
 		xbricks = int(math.ceil(xyz_bricks[0] / 2))
 		ybricks = int(math.ceil(xyz_bricks[1] / 2))
 		zbricks = int(math.ceil(xyz_bricks[2] / 2))
@@ -76,8 +76,6 @@ class brixelateFunctions():
 		to_use = 0
 		temp_count = 0
 		for key in temp_dict:
-			# print("key: {}".format(key))
-			# print("touse: {}".format(to_use))
 			key_count = temp_dict[key]['count']
 			if key_count > temp_count:
 				temp_count = key_count
@@ -85,14 +83,6 @@ class brixelateFunctions():
 
 		start_point = temp_dict[to_use]['start_point']
 		bricks_array = temp_dict[to_use]['array']
-		# if temp_dict['offset']['count'] > temp_dict['centre']['count']:
-		# 	start_point = temp_dict['offset']['start_point']
-		# 	bricks_array = temp_dict['offset']['array']
-		# 	print('Using offset')
-		# else:
-		# 	start_point = temp_dict['centre']['start_point']
-		# 	bricks_array = temp_dict['centre']['array']
-		# 	print('Using centre')
 
 		if 'output' in kwargs:
 			if kwargs['output']:
@@ -130,9 +120,7 @@ class brixelateFunctions():
 				# name, dimensions, object vol, lego vol, vol %, brick_count, bricks
 				name_string = object_selected.name + ','
 				bounded_string = str(int(use_shell_as_bounds)) + ','
-				dimensions_string = '{:.3f},{:.3f},{:.3f},'.format(object_selected.dimensions[0],
-																   object_selected.dimensions[1],
-																   object_selected.dimensions[2])
+				dimensions_string = '{:.3f},{:.3f},{:.3f},'.format(dimensions[0], dimensions[1], dimensions[2])
 				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
 				brick_count_string = '{:d},'.format(brick_count)
 
@@ -156,8 +144,9 @@ class brixelateFunctions():
 
 	def brickBounds(self, scene, object_selected, brick_size):
 		w, d, h = brick_size
-
-		bpy.ops.object.transform_apply(location=False, rotation=False, scale=True)
+		object_selected.select = True
+		scene.objects.active = object_selected
+		bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
 		vertices = [object_selected.matrix_world * Vector(corner) for corner in object_selected.bound_box]
 		x_vec = vertices[4] - vertices[0]
 		y_vec = vertices[3] - vertices[0]
@@ -166,6 +155,8 @@ class brixelateFunctions():
 		x_dim = round(x_vec.length, 4)
 		y_dim = round(y_vec.length, 4)
 		z_dim = round(z_vec.length, 4)
+
+		dimensions = [x_dim, y_dim, z_dim]
 
 		start_point = vertices[0] + (x_vec / 2) + (y_vec / 2) + (z_vec / 2)
 
@@ -180,7 +171,7 @@ class brixelateFunctions():
 
 		lego_dimensions_string = "LEGO Dimensions  X:{0} Y:{1} Z:{2}".format(x_brick, y_brick, z_brick)
 
-		return xyz_brick, start_point
+		return xyz_brick, start_point, dimensions
 
 	def brickPacking(self, scene, bricks_array, start_point, bricks_to_use, **kwargs):
 		start_time = time.time()
@@ -359,8 +350,8 @@ def experimentation(context):
 			new_dims = base_dims * scale
 			object_selected.dimensions = new_dims
 
-			progress_string = "Running {:d} of {:d} on {}".format(ci, number_scales, name)
-			print(progress_string)
+			progress_string = "\rRunning {:d} of {:d} on {}".format(ci, number_scales, name)
+			print(progress_string, end='\r')
 
 			output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True)
 			csv_write(csv_file_name, output_data)
@@ -420,26 +411,47 @@ def ratio(context, method):
 		y_dim = round(y_vec.length, 4)
 		z_dim = round(z_vec.length, 4)
 
-		quats, diffs, diff_to_orig = get_quats(number_points)
+		theta, phi = get_angles(number_points)
 		pi = 1
 		if not spin:
-			diffs = [diffs[0]]
-			quats = [quats[0]]
+			rpy= [(0,0,0)]
+		else:
+			base = [(0,0,0)]
+			pitch = []
+			roll = []
+			yaw = []
 
-		# for diff in diffs:
-		for quat in quats:
+			phi.sort()
+			for p in phi:
+				pitch.append((p,0,0))
+				roll.append((0,p,0))
+				yaw.append((0,0,p))
 
-			object_selected.rotation_mode = "QUATERNION"
-			object_selected.rotation_quaternion = quat  # diff
-			object_selected.rotation_mode = "XYZ"
+			rpy = base + pitch + roll + yaw
+		print(rpy)
 
-			rot_x, rot_y, rot_z = object_selected.rotation_euler
-			rots = [np.rad2deg(rot_x), np.rad2deg(rot_y), np.rad2deg(rot_z)]
-			rot_string = ','.join(str(rots))
-			# print(rot_string)
+		for ang in rpy:
+
+			mesh = object_selected.data  # use current object's data
+			mesh_copy = mesh.copy()
+
+			temp_ob = bpy.data.objects.new("Mesh Copy", mesh_copy)
+			temp_ob.location = object_selected.location
+			temp_ob.rotation_euler = ang
+			temp_ob.name = name
+			context.scene.objects.link(temp_ob)
+
+			rot_x, rot_y, rot_z = temp_ob.rotation_euler
+
+			rots = [np.rad2deg(rot_x), np.rad2deg(rot_y) % 360, np.rad2deg(rot_z) % 360]
+			rot_string = ','.join([str(r) for r in rots])
+
 			# bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
-			progress_string = "------\nPosition {:d} of {:d}\n------\nX: {: .1f}\tY: {: .1f}\tZ: {: .1f}".format(pi, number_points,
-																				 rots[0], rots[1], rots[2])
+			progress_string = "------\n" \
+							  "Position {:d} of {:d}" \
+							  "\nP: {: 4.1f} R: {: 4.1f} Y: {: 4.1f}" \
+							  "\n------".format(pi, len(rpy), rots[0], rots[1],
+												rots[2])
 			print(progress_string)
 
 			ci = 1
@@ -465,10 +477,10 @@ def ratio(context, method):
 				else:
 					raise ValueError("Method '{}' not recognised".format(str(method)))
 
-				progress_string = "Running {:d} of {:d} on {}".format(ci, number_ratios, name)
-				print(progress_string)
+				progress_string = "\rRunning {:d} of {:d} on {}".format(ci, number_ratios, name)
+				print(progress_string, end='\r')
 				ratio_string = str(ratio) + ','
-				output_data = brixelateFunctions().brixelate(context.scene, object_selected, output=True,
+				output_data = brixelateFunctions().brixelate(context.scene, temp_ob, output=True,
 															 ratio=brick_size)
 				output_data = output_data.rstrip()
 				output_data = output_data + ratio_string + rot_string + '\n'
@@ -479,10 +491,8 @@ def ratio(context, method):
 			print('\n')
 			cj += 1
 			pi += 1
+			objs = bpy.data.objects
+			objs.remove(temp_ob, True)
+			bpy.ops.object.select_all(action='DESELECT')
 
-		# object_selected.rotation_mode = "QUATERNION"
-		# object_selected.rotation_quaternion = diff_to_orig
-		object_selected.rotation_euler = (0, 0, 0)
-		object_selected.rotation_mode = "XYZ"
-	# bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 	return number_objects, number_ratios, number_points

@@ -2,6 +2,7 @@ import time
 import datetime
 import copy
 import math
+import re
 from operator import itemgetter
 
 import bpy
@@ -118,7 +119,9 @@ class brixelateFunctions():
 		if 'output' in kwargs:
 			if kwargs['output']:
 				# name, dimensions, object vol, lego vol, vol %, brick_count, bricks
-				name_string = object_selected.name + ','
+				raw_name = object_selected.name
+				name = re.sub(r"^(([a-zA-Z_\d]+)(.?\d+)?)", r"\g<2>", raw_name)
+				name_string = name + ','
 				bounded_string = str(int(use_shell_as_bounds)) + ','
 				dimensions_string = '{:.3f},{:.3f},{:.3f},'.format(dimensions[0], dimensions[1], dimensions[2])
 				volume_string = '{:f},{:f},{:f},'.format(object_volume, lego_volume, volume_percent)
@@ -380,7 +383,9 @@ def ratio(context, method):
 		ratios.append(interp_scale)
 
 	spin = getSettings().spin_object
-	number_points = getSettings().number_points
+	roll_pts = getSettings().roll
+	pitch_pts = getSettings().pitch
+	yaw_pts = getSettings().yaw
 
 	base_brick = [1.0, 1.0, 0.4]
 
@@ -411,8 +416,10 @@ def ratio(context, method):
 		y_dim = round(y_vec.length, 4)
 		z_dim = round(z_vec.length, 4)
 
-		theta, phi = get_angles(number_points)
-		pi = 1
+		roll_angs = get_angles(roll_pts)
+		pitch_angs = get_angles(pitch_pts)
+		yaw_angs = get_angles(yaw_pts)
+		pos_i = 1
 		if not spin:
 			rpy= [(0,0,0)]
 		else:
@@ -421,14 +428,17 @@ def ratio(context, method):
 			roll = []
 			yaw = []
 
-			phi.sort()
-			for p in phi:
+			for r in roll_angs:
+				roll.append((0,r,0))
+			for p in pitch_angs:
 				pitch.append((p,0,0))
-				roll.append((0,p,0))
-				yaw.append((0,0,p))
+			for y in yaw_angs:
+				yaw.append((0,0,y))
 
 			rpy = base + pitch + roll + yaw
 		print(rpy)
+
+		number_positions = len(rpy)
 
 		for ang in rpy:
 
@@ -444,13 +454,13 @@ def ratio(context, method):
 			rot_x, rot_y, rot_z = temp_ob.rotation_euler
 
 			rots = [np.rad2deg(rot_x), np.rad2deg(rot_y) % 360, np.rad2deg(rot_z) % 360]
-			rot_string = ','.join([str(r) for r in rots])
+			rot_string = ','.join([str(r) for r in rots]) + ','
 
 			# bpy.ops.object.transform_apply(location=False, rotation=True, scale=False)
 			progress_string = "------\n" \
 							  "Position {:d} of {:d}" \
 							  "\nP: {: 4.1f} R: {: 4.1f} Y: {: 4.1f}" \
-							  "\n------".format(pi, len(rpy), rots[0], rots[1],
+							  "\n------".format(pos_i, len(rpy), rots[0], rots[1],
 												rots[2])
 			print(progress_string)
 
@@ -490,9 +500,9 @@ def ratio(context, method):
 				ci += 1
 			print('\n')
 			cj += 1
-			pi += 1
+			pos_i += 1
 			objs = bpy.data.objects
 			objs.remove(temp_ob, True)
 			bpy.ops.object.select_all(action='DESELECT')
 
-	return number_objects, number_ratios, number_points
+	return number_objects, number_ratios, number_positions

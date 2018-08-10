@@ -94,10 +94,24 @@ class PanelSettings(bpy.types.PropertyGroup):
 
 	spin_object = BoolProperty(name="Spin Object", default=False)
 
-	number_points = IntProperty(
-		name='Number of Points',
-		description='Number of Points to rotate to',
-		default=20,
+	roll = IntProperty(
+		name='Roll',
+		description='Number of Roll Positions',
+		default=10,
 		min=1,
-		max=500
+		max=180
+	)
+	pitch = IntProperty(
+		name='Pitch',
+		description='Number of Pitch Positions',
+		default=10,
+		min=1,
+		max=180
+	)
+	yaw = IntProperty(
+		name='Yaw',
+		description='Number of Yaw Positions',
+		default=10,
+		min=1,
+		max=180
 	)

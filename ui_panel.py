@@ -108,7 +108,10 @@ class BrixelPanel(bpy.types.Panel):
 		row = box.row()
 		row.prop(settings, "spin_object")
 		if settings.spin_object:
-			row.prop(settings, "number_points", slider=True)
+			row=box.row(align=True)
+			row.prop(settings, "roll")
+			row.prop(settings, "pitch")
+			row.prop(settings, "yaw")
 
 
 

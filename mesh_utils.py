@@ -95,27 +95,28 @@ def rayInside(edges, centre, model):
 
 
 def get_angles(number_points):
-	#number_points = number_points * 4
-	indices = np.arange(0, number_points, dtype=float)
-
-	theta = np.arccos(1 - 2 * indices / number_points)
-	phi = (np.pi * (1 + 5 ** 0.5) * indices) % (2 * np.pi)
-
-	x, y, z = np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)
-
-	t_n = []
-	p_n = []
-	for i in range(len(theta)):
-		t = theta[i]
-		p = phi[i]
-
-		if t > 0 and t <= np.pi and p > 0 and p <= np.pi / 2:
-			t_n.append(t)
-			p_n.append(p)
-
-	phi = p_n
-	theta = t_n
+	# #number_points = number_points * 4
+	# indices = np.arange(0, number_points, dtype=float)
+	#
+	# theta = np.arccos(1 - 2 * indices / number_points)
+	# phi = (np.pi * (1 + 5 ** 0.5) * indices) % (2 * np.pi)
+	#
+	# x, y, z = np.cos(phi) * np.sin(theta), np.sin(phi) * np.sin(theta), np.cos(theta)
+	#
+	# t_n = []
+	# p_n = []
+	# for i in range(len(theta)):
+	# 	t = theta[i]
+	# 	p = phi[i]
+	#
+	# 	if t > 0 and t <= np.pi and p > 0 and p <= np.pi / 2:
+	# 		t_n.append(t)
+	# 		p_n.append(p)
+	#
+	# phi = p_n
+	# theta = t_n
 
 	phi_s = np.linspace(0, np.pi / 2, number_points + 1)[1:]
+	phi_s.sort()
 
-	return theta, phi_s
+	return phi_s

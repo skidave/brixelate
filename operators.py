@@ -161,8 +161,8 @@ class spinTest(bpy.types.Operator):
 		from mathutils import Vector
 
 		object_selected = context.selected_objects[0]
-		num = getSettings().number_points
-		theta, phi= get_angles(getSettings().number_points)
+		num = 10
+		phi= get_angles(num)
 
 		phi.sort()
 		for i in range(len(phi)):

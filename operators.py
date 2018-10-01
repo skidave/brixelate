@@ -5,6 +5,7 @@ import bpy
 from .settings_utils import getSettings
 from .lego_utils import legoData
 from .brixelate_funcs import brixelateFunctions, experimentation, ratio
+from .implementation import ImplementFuncs
 
 
 # TODO add studs and holes
@@ -162,7 +163,7 @@ class spinTest(bpy.types.Operator):
 
 		object_selected = context.selected_objects[0]
 		num = 10
-		phi= get_angles(num)
+		phi = get_angles(num)
 
 		phi.sort()
 		for i in range(len(phi)):
@@ -170,25 +171,50 @@ class spinTest(bpy.types.Operator):
 			me_copy = me.copy()
 			ob = bpy.data.objects.new("Mesh Copy", me_copy)
 
-
 			# ob.location = object_selected.location + Vector((250*(i+1), 0, 0))#Vector((x[i], y[i], z[i]))
 			# ob.rotation_euler = (phi[i], 0, 0)  # pitch
 
 			# ob.location = object_selected.location + Vector((0,0, 100 * (i+1)))  # Vector((x[i], y[i], z[i]))
 			# ob.rotation_euler = (0, 0, phi[i]) # yaw
 
-			ob.location = object_selected.location + Vector((0, 200*(i+1), 0))  # Vector((x[i], y[i], z[i]))
-			ob.rotation_euler = (0, phi[i], 0) # roll
+			ob.location = object_selected.location + Vector((0, 200 * (i + 1), 0))  # Vector((x[i], y[i], z[i]))
+			ob.rotation_euler = (0, phi[i], 0)  # roll
 
 			context.scene.objects.link(ob)
-			ob.select=True
+			ob.select = True
 			context.scene.objects.active = ob
 			bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-			ob.show_bounds=True
-			ob.select=False
-
+			ob.show_bounds = True
+			ob.select = False
 
 		bpy.context.scene.objects.active = object_selected
+
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
+class MergeTest(bpy.types.Operator):
+	'''Merges Bricks'''
+	bl_idname = "tool.merge_test"
+	bl_label = "Brixelate Brick Merge"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		scene = context.scene
+		bricks = 0
+		for ob in scene.objects:
+			if ob.name.startswith('Brick'):
+				bricks +=1
+
+		if bricks > 0:
+			return True
+
+	def execute(self, context):
+
+		ImplementFuncs().select_bricks(context.scene)
 
 		return {'FINISHED'}
 

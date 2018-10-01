@@ -39,6 +39,8 @@ class PanelSettings(bpy.types.PropertyGroup):
 
 	brick_selection = BoolProperty(name="Expand Brick Selection", default=False)
 
+	experimentation = BoolProperty(name="Expand Experiments", default=False)
+
 	all_plates = BoolProperty(name="Toggles All Plates", default=True, update=allPlates)
 	all_bricks = BoolProperty(name="Toggles All Bricks", default=True, update=allBricks)
 

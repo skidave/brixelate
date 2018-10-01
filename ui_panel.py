@@ -2,6 +2,7 @@ import bpy
 
 from .settings_utils import getSettings
 
+
 class BrixelPanel(bpy.types.Panel):
 	bl_space_type = "VIEW_3D"
 	bl_region_type = "TOOLS"
@@ -18,7 +19,6 @@ class BrixelPanel(bpy.types.Panel):
 		box = col.box()
 		box.label("Brick Types", icon="GROUP_VERTEX")
 
-
 		row = box.row(align=True)
 		row.prop(settings, "use_nano", text="NanoBlocks", icon="FILE_TICK" if settings.use_nano else "RADIOBUT_OFF",
 				 toggle=True)
@@ -31,9 +31,11 @@ class BrixelPanel(bpy.types.Panel):
 		if settings.use_lego:
 			box.label("LEGO Brick Layout", icon="SCRIPT")  # or SCRIPTWIN
 			row = box.row(align=True)
-			row.prop(settings, "all_plates", text="LEGO Plates", icon="FILE_TICK" if settings.all_plates else "RADIOBUT_OFF",
+			row.prop(settings, "all_plates", text="LEGO Plates",
+					 icon="FILE_TICK" if settings.all_plates else "RADIOBUT_OFF",
 					 toggle=True)
-			row.prop(settings, "all_bricks", text="LEGO Bricks", icon="FILE_TICK" if settings.all_bricks else "RADIOBUT_OFF",
+			row.prop(settings, "all_bricks", text="LEGO Bricks",
+					 icon="FILE_TICK" if settings.all_bricks else "RADIOBUT_OFF",
 					 toggle=True)
 
 			row = box.row(align=True)
@@ -88,40 +90,10 @@ class BrixelPanel(bpy.types.Panel):
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
 
 		layout.separator()
-		box = layout.box()
-		box.label("Experiments", icon="FCURVE")
-		row = box.row()
-		row.prop(settings, "max_range")
-		row.prop(settings, "scale_factor", slider=True)
-
-		box.operator("tool.brixelate_experiments", text="Run Experiments", icon="FILE_TICK")
-
-		layout.separator()
-		box = layout.box()
-		box.label("Ratio", icon="SORTSIZE")
-		row = box.row()
-		row.prop(settings, "start_ratio")
-
-		row.prop(settings, "end_ratio")
-		row = box.row()
-		row.prop(settings, "ratio_step", text="Number of Steps")
-		row = box.row()
-		row.prop(settings, "spin_object")
-		if settings.spin_object:
-			row=box.row(align=True)
-			row.prop(settings, "roll")
-			row.prop(settings, "pitch")
-			row.prop(settings, "yaw")
-
-
-
-		box.operator("tool.brixelate_ratio", text="Run Ratios", icon="FILE_TICK")
-
-		layout.separator()
 		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
 
 		layout.separator()
-		layout.operator("tool.spin_test", text="TEST")
+		layout.operator("tool.merge_test", text="TEST", icon="QUESTION")
 
 		if len(scene.objects) > 0:
 
@@ -139,6 +111,37 @@ class BrixelPanel(bpy.types.Panel):
 				row.prop(settings, "show_hide_lego", text=("Visible" if settings.show_hide_lego else "Hidden"),
 						 toggle=True)
 
+		layout.separator()
+		box = layout.box()
+		box.prop(settings, "experimentation", icon="TRIA_DOWN" if settings.experimentation else "TRIA_RIGHT",
+				 text="Experimentation", emboss=False)
+
+		if settings.experimentation:
+			box.label("Scale", icon="FCURVE")
+			row = box.row()
+			row.prop(settings, "max_range")
+			row.prop(settings, "scale_factor", slider=True)
+
+			box.operator("tool.brixelate_experiments", text="Run Scales", icon="FILE_TICK")
+
+			layout.separator()
+			# box = layout.box()
+			box.label("Ratio", icon="SORTSIZE")
+			row = box.row()
+			row.prop(settings, "start_ratio")
+
+			row.prop(settings, "end_ratio")
+			row = box.row()
+			row.prop(settings, "ratio_step", text="Number of Steps")
+			row = box.row()
+			row.prop(settings, "spin_object")
+			if settings.spin_object:
+				row = box.row(align=True)
+				row.prop(settings, "roll")
+				row.prop(settings, "pitch")
+				row.prop(settings, "yaw")
+
+			box.operator("tool.brixelate_ratio", text="Run Ratios", icon="FILE_TICK")
 
 # end draw
 

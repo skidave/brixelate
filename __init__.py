@@ -17,7 +17,8 @@ from .operators import (resetBrixelate,
 						simpleBrixelate,
 						experimentationBrixelate,
 						ratioBrixelate,
-						spinTest
+						spinTest,
+						MergeTest
 						)
 from .ui_panel import BrixelPanel
 from .panel_settings import PanelSettings
@@ -31,6 +32,7 @@ classes = (
 	resetBrixelate,
 
 	spinTest,
+	MergeTest,
 
 	BrixelPanel,
 	PanelSettings)

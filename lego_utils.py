@@ -107,6 +107,45 @@ class legoData():
 		new_brick.select = False
 		new_brick.location = point
 
+	def simple_add_brick_at_point(self, point, name):
+		depth, width, height = 1,1,1
+
+		w, d, h = self.getDims()
+
+		Vertices = \
+			[
+				Vector((0, 0, 0)),
+				Vector((0, d * depth, 0)),
+				Vector((w * width, d * depth, 0)),
+				Vector((w * width, 0, 0)),
+				Vector((0, 0, h * height)),
+				Vector((0, d * depth, h * height)),
+				Vector((w * width, d * depth, h * height)),
+				Vector((w * width, 0, h * height)),
+			]
+
+		Faces = \
+			[
+				(0, 1, 2, 3),
+				(5, 4, 7, 6),
+				(0, 4, 5, 1),
+				(2, 1, 5, 6),
+				(2, 6, 7, 3),
+				(3, 7, 4, 0)
+			]
+
+		name_string = "temp " + name
+		newMesh = bpy.data.meshes.new(name_string)
+		newMesh.from_pydata(Vertices, [], Faces)
+		newMesh.update()
+		new_brick = bpy.data.objects.new(name_string, newMesh)
+		bpy.context.scene.objects.link(new_brick)
+
+		new_brick.select = True
+		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+		new_brick.select = False
+		new_brick.location = point
+
 	@staticmethod
 	def randomiseColour(object, brick_type):
 		if brick_type == 'D':

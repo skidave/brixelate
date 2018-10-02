@@ -14,6 +14,7 @@ from .mesh_utils import getVertices, getEdges, rayInside, get_angles
 from .lego_utils import legoData
 from .settings_utils import getSettings
 from .file_utils import csv_header, csv_write
+from .implementation import ImplementData
 
 
 class brixelateFunctions():
@@ -84,6 +85,10 @@ class brixelateFunctions():
 
 		start_point = temp_dict[to_use]['start_point']
 		bricks_array = temp_dict[to_use]['array']
+
+		ImplementData.start_point = start_point
+		ImplementData.array = bricks_array
+		ImplementData.object_name  = object_selected.name
 
 		if 'output' in kwargs:
 			if kwargs['output']:

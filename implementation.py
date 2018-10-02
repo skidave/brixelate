@@ -70,6 +70,7 @@ class ImplementFuncs():
 
 		print("Object Mode")
 		bpy.ops.object.mode_set(mode='OBJECT')
+
 	def add_temp_bricks(self, array, start_point, name):
 
 		z_array, y_array, x_array = array.shape[0], array.shape[1], array.shape[2]
@@ -82,10 +83,31 @@ class ImplementFuncs():
 		for z in range(z_array):
 			for y in range(y_array):
 				for x in range(x_array):
+					point = Vector(((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
 					if array[z, y, x] == 1:
-						point = Vector(((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
 						legoData().simple_add_brick_at_point(point, name)
-					if array[z,y,x] == 1 and array[z+1, y, x]==0:
+					if array[z, y, x] == 1 and array[z + 1, y, x] == 0:
 						print('add stud')
-					if array[z,y,x] == 1 and array[z-1, y, x]==0:
+						self.add_cylinder(point, 1)
+					if array[z, y, x] == 1 and array[z - 1, y, x] == 0:
 						print('add hole')
+
+	def add_cylinder(self, location, type):
+		bm = bmesh.new()
+
+		diameter = 4.8 / 2
+		height = 1.9
+
+		bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=12, diameter1=diameter, diameter2=diameter,
+							  depth=1.9)
+
+		me = bpy.data.meshes.new("Mesh")
+		bm.to_mesh(me)
+		bm.free()
+		cylinder = bpy.data.objects.new("name", me)
+		bpy.context.scene.objects.link(cylinder)
+
+		cylinder.select = True
+		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+		cylinder.select = False
+		cylinder.location = location

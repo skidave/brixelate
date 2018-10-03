@@ -10,10 +10,14 @@ def getVertices(pos, w, d, h):
 			pos + Vector((-w / 2, d / 2, -h / 2)),
 			pos + Vector((w / 2, d / 2, -h / 2)),
 			pos + Vector((w / 2, -d / 2, -h / 2)),
-			pos + Vector((-w / 2, -d / 2, h / 2)),
-			pos + Vector((-w / 2, d / 2, h / 2)),
-			pos + Vector((w / 2, d / 2, h / 2)),
-			pos + Vector((w / 2, -d / 2, h / 2)),
+			# pos + Vector((-w / 2, -d / 2, h / 2)),
+			# pos + Vector((-w / 2, d / 2, h / 2)),
+			# pos + Vector((w / 2, d / 2, h / 2)),
+			# pos + Vector((w / 2, -d / 2, h / 2)),
+			pos + Vector((-w / 2, -d / 2, h)),
+			pos + Vector((-w / 2, d / 2, h)),
+			pos + Vector((w / 2, d / 2, h)),
+			pos + Vector((w / 2, -d / 2, h)),
 		]
 	centre = pos
 	return vertices, centre

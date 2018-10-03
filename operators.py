@@ -214,7 +214,7 @@ class MergeTest(bpy.types.Operator):
 
 	def execute(self, context):
 
-		ImplementFuncs().select_bricks(context.scene)
+		ImplementFuncs().bricks_boolean(context.scene)
 
 		return {'FINISHED'}
 

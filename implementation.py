@@ -96,7 +96,7 @@ class ImplementFuncs():
 		bpy.ops.object.modifier_apply(apply_as='DATA', modifier="stud bool")
 		bpy.ops.object.modifier_apply(apply_as='DATA', modifier="hole bool")
 
-		#triangulate to ensure better boolean operations
+		# triangulate to ensure better boolean operations
 		triangulate = joined_bricks.modifiers.new(type='TRIANGULATE', name="triang")
 		bpy.ops.object.modifier_apply(apply_as='DATA', modifier="triang")
 
@@ -132,18 +132,18 @@ class ImplementFuncs():
 						if array[z - 1, y, x] == 0:
 							self.add_cylinder(point, 'HOLE')
 
-
 	def add_cylinder(self, location, cylinder_type):
 
 		w, d, h = legoData().getDims()
 		diameter = 4.8 / 2
-		height = 1.7
+		height = 1.8
 		if cylinder_type == 'STUD':
 			z_offset = (h / 2) + (height / 2) - 0.1
 		elif cylinder_type == 'HOLE':
+			diameter = 5.0 / 2
 			z_offset = (-h / 2) + (height / 2) - 0.1
 
-		z_vec = Vector((0,0,z_offset))
+		z_vec = Vector((0, 0, z_offset))
 		bm = bmesh.new()
 		bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=18, diameter1=diameter, diameter2=diameter,
 							  depth=height)

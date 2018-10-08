@@ -140,7 +140,7 @@ class ImplementFuncs():
 		if cylinder_type == 'STUD':
 			z_offset = (h / 2) + (height / 2) - 0.1
 		elif cylinder_type == 'HOLE':
-			diameter = 5.0 / 2
+			diameter = 5.4 / 2
 			z_offset = (-h / 2) + (height / 2) - 0.1
 
 		z_vec = Vector((0, 0, z_offset))

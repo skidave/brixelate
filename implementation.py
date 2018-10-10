@@ -1,19 +1,12 @@
-import time
-import datetime
-import copy
-import math
-import re
-from operator import itemgetter
+import os
+import csv
 
 import bpy
 import bmesh
 from mathutils import Vector
 import numpy as np
 
-from .mesh_utils import getVertices, getEdges, rayInside, get_angles
 from .lego_utils import legoData
-from .settings_utils import getSettings
-from .file_utils import csv_header, csv_write
 
 
 class ImplementData():
@@ -84,12 +77,12 @@ class ImplementFuncs():
 
 		stud_bool = joined_bricks.modifiers.new(type="BOOLEAN", name="stud bool")
 		stud_bool.object = stud
-		stud_bool.operation = 'UNION'
+		stud_bool.operation = 'DIFFERENCE'
 		# stud.hide = True
 
 		hole_bool = joined_bricks.modifiers.new(type="BOOLEAN", name="hole bool")
 		hole_bool.object = hole
-		hole_bool.operation = 'DIFFERENCE'
+		hole_bool.operation = 'UNION'
 		# hole.hide = True
 
 		scene.objects.active = joined_bricks
@@ -128,20 +121,17 @@ class ImplementFuncs():
 					if array[z, y, x] == 1:
 						legoData().simple_add_brick_at_point(point, name)
 						if array[z + 1, y, x] == 0:
-							self.add_cylinder(point, 'STUD')
+							self.add_hole(point)
 						if array[z - 1, y, x] == 0:
-							self.add_cylinder(point, 'HOLE')
+							self.add_stud(point)
 
-	def add_cylinder(self, location, cylinder_type):
+
+	def add_stud(self, location):
 
 		w, d, h = legoData().getDims()
-		diameter = 4.8 / 2
+		diameter = 4.9 / 2
 		height = 1.8
-		if cylinder_type == 'STUD':
-			z_offset = (h / 2) + (height / 2) - 0.1
-		elif cylinder_type == 'HOLE':
-			diameter = 5.4 / 2
-			z_offset = (-h / 2) + (height / 2) - 0.1
+		z_offset = (-h / 2) + (height / 2) - 0.1
 
 		z_vec = Vector((0, 0, z_offset))
 		bm = bmesh.new()
@@ -151,7 +141,7 @@ class ImplementFuncs():
 		me = bpy.data.meshes.new("Mesh")
 		bm.to_mesh(me)
 		bm.free()
-		cylinder = bpy.data.objects.new(cylinder_type, me)
+		cylinder = bpy.data.objects.new("STUD", me)
 		bpy.context.scene.objects.link(cylinder)
 
 		cylinder.select = True
@@ -160,3 +150,47 @@ class ImplementFuncs():
 
 		offset_location = location + z_vec
 		cylinder.location = offset_location
+
+	def add_hole(self, location):
+
+		w, d, h = legoData().getDims()
+		height = 2.0
+
+		z_offset = (h / 2) + (height / 2) - 0.1
+
+		z_vec = Vector((0, 0, z_offset))
+
+		bm = bmesh.new()
+		v = []
+
+		csv_file_name = os.path.abspath(os.path.join(os.path.dirname(__file__), 'hole_verts.csv'))
+		with open(csv_file_name) as csvfile:
+			vertices = csv.reader(csvfile)
+
+			for vertex in vertices:
+				x, y, z = [float(_v) for _v in vertex]
+				v.append(bm.verts.new((x, y, z)))
+
+		bottom = bm.faces.new((reversed(v)))
+
+		top = bmesh.ops.extrude_face_region(bm, geom=[bottom])
+
+		bmesh.ops.translate(bm, vec=Vector((0, 0, height)),
+							verts=[v for v in top["geom"] if isinstance(v, bmesh.types.BMVert)])
+
+		# Finish up, write the bmesh into a new mesh
+		me = bpy.data.meshes.new("Mesh")
+		bm.to_mesh(me)
+		bm.free()
+
+		# Add the mesh to the scene
+		scene = bpy.context.scene
+		obj = bpy.data.objects.new("HOLE", me)
+		scene.objects.link(obj)
+
+		obj.select = True
+		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+		obj.select = False
+
+		offset_location = location + z_vec
+		obj.location = offset_location

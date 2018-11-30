@@ -87,7 +87,7 @@ class brixelateFunctions():
 		bricks_array = temp_dict[to_use]['array']
 
 		ImplementData.start_point = start_point
-		ImplementData.array = bricks_array
+
 		ImplementData.object_name  = object_selected.name
 
 		if 'output' in kwargs:
@@ -102,11 +102,16 @@ class brixelateFunctions():
 
 			brick_count = int(np.sum(bricks_array))
 			lego_volume = brick_count * brick_vol
+
+			ImplementData.array = bricks_array
 		else:
-			lego_volume, used_bricks_dict, brick_count = self.brickPacking(scene, bricks_array, start_point,
+			lego_volume, used_bricks_dict, brick_count, packed_brick_array = self.brickPacking(scene, bricks_array, start_point,
 																		   bricks_to_use,
 																		   add_bricks=add_bricks)
 
+			print(bricks_array)
+			print(packed_brick_array)
+			ImplementData.array = packed_brick_array
 		bm = bmesh.new()
 		bm.from_mesh(object_selected.data)
 		bmesh.ops.triangulate(bm, faces=bm.faces)
@@ -276,7 +281,6 @@ class brixelateFunctions():
 											addNewBrickAtPoint(translation, width, depth, height, brick_num, brick_name)
 									brick_num += 1
 									volume_count += width * depth * height
-
 		lego_volume = volume_count * w * d * h
 
 		scene.my_settings.show_hide_lego = False
@@ -284,10 +288,13 @@ class brixelateFunctions():
 
 		brick_count = brick_num - 1
 
+
+		packed_brick_array = copy.copy(opt_bricks)
+
 		end_time = time.time()
 		packing_time = (end_time - start_time)
 
-		return lego_volume, used_bricks_dict, brick_count
+		return lego_volume, used_bricks_dict, brick_count, packed_brick_array
 
 	@staticmethod
 	def bmesh_copy_from_object(obj, transform=True, triangulate=True, apply_modifiers=False):

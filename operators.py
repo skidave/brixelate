@@ -257,17 +257,9 @@ class SplitObjectWithPlane(bpy.types.Operator):
 		return split_plane_present and object_to_split_present and viable_split
 
 	def execute(self, context):
-		# objects = bpy.data.objects
-		# object_to_split_name = bpy.types.Scene.lego_surface_check.nearest_object_name
-		# print(object_to_split_name)
-		# object_to_split = objects[object_to_split_name]
-		# lego_surface = objects["Lego Surface"]
-		#
-		# male_side, female_side = self.BooleanDifference(lego_surface, object_to_split)
-		# self.AddStuds(lego_surface, female_side, True)
-		# self.AddStuds(lego_surface, male_side, False)
-		# self.PostSplitCleanUp(lego_surface, object_to_split)
-		Split().split_with_plane(context)
+		report = Split().split_with_plane(context)
+
+		self.report = report
 
 		return {"FINISHED"}
 

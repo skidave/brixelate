@@ -24,7 +24,7 @@ from .operators import (resetBrixelate,
 						)
 from .ui_panel import BrixelPanel
 from .panel_settings import PanelSettings
-from .split import SurfaceCheck, SurfaceUpdate
+from .split import SurfaceCheck, SurfaceUpdate, Colours
 
 classes = (
 	simpleBrixelate,
@@ -52,6 +52,7 @@ def register():
 
 	bpy.types.Scene.surface_check = SurfaceCheck()
 	bpy.types.Scene.my_settings = bpy.props.PointerProperty(type=PanelSettings)
+	bpy.types.Scene.colours = Colours()
 
 
 def unregister():
@@ -60,6 +61,7 @@ def unregister():
 
 	del bpy.types.Scene.my_settings
 	del bpy.types.Scene.surface_check
+	del bpy.types.Scene.colours
 
 
 if __name__ == "__main__":

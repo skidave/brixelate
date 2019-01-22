@@ -7,6 +7,13 @@ import mathutils
 from mathutils import Vector
 
 
+class Colours():
+	default_colour = (0.7, 0.7, 0.7)
+	target_colour = (0.0, 0.3, 1)
+	split_true = (0.1, 0.8, 0.1)
+	split_false = (0.8, 0, 0)
+
+
 class Split():
 
 	def add_plane(self, context):
@@ -25,17 +32,105 @@ class Split():
 
 		split_plane.lock_scale = [False, False, True]  # locks scaling in z (thickness) axis
 
-		# colours = bpy.types.Scene.colours  # loads colours from separate class
-		# colour = bpy.data.materials.new(name="default_colour")
-		# split_plane.data.materials.append(colour)
-		# split_plane.data.materials[0].diffuse_color = colours.default_colour
+		colours = bpy.types.Scene.colours  # loads colours from separate class
+		colour = bpy.data.materials.new(name="default_colour")
+		split_plane.data.materials.append(colour)
+		split_plane.data.materials[0].diffuse_color = colours.default_colour
 
 		split_plane.select = True
 		bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
 
 	def split_with_plane(self, context):
-		print('splitting')
+		objects = bpy.data.objects
+		object_to_split_name = bpy.types.Scene.surface_check.nearest_object_name
+		#print(object_to_split_name)
+		object_to_split = objects[object_to_split_name]
+		surface = objects["SplitPlane"]
 
+		self.BooleanDifference(surface, object_to_split, displace=True)
+		report = self.PostSplitCleanUp(surface, object_to_split)
+		return report
+
+
+	def BooleanDifference(self, plane, object_to_split, displace):
+		ops = bpy.ops
+		context = bpy.context
+		objects = bpy.data.objects
+
+		context.scene.objects.active = object_to_split
+		name = object_to_split.name
+		name = name.split('.')[0]
+
+		obj_origin = object_to_split.matrix_world.to_translation()
+
+		object_split_mod = object_to_split.modifiers.new(type="BOOLEAN", name="object_split")
+		object_split_mod.object = plane
+		object_split_mod.operation = 'DIFFERENCE'
+		ops.object.modifier_apply(modifier="object_split")
+
+		# Separate by loose parts
+		ops.object.mode_set(mode='EDIT')
+		ops.mesh.select_all(action='SELECT')
+		ops.mesh.separate(type='LOOSE')
+		ops.object.mode_set(mode='OBJECT')
+
+		plane_origin = plane.matrix_world.to_translation()
+		plane_rotation = plane.rotation_euler
+
+		for obj in objects:
+			if obj.name != "SplitPlane" and obj.name.startswith(name):
+				obj.select = True
+				ops.object.origin_set(type='ORIGIN_GEOMETRY')
+
+				origin = obj.matrix_world.to_translation()
+				origin_in_plane_space = plane.matrix_world.inverted() * origin
+
+				if displace:
+					displace_dist = 10
+					if origin_in_plane_space[2] <= 0:
+						# print(obj.name + ' BELOW')
+						direction = Vector((0, 0, -displace_dist))
+					else:
+						# print(obj.name + ' ABOVE')
+						direction = Vector((0, 0, displace_dist))
+
+					displacement_vector = plane.matrix_world * direction - plane_origin
+					obj.location = obj.location + displacement_vector
+
+				# applies location transformation to data mesh
+				ops.object.transform_apply(location=True)
+				ops.object.origin_set(type='ORIGIN_GEOMETRY')
+				obj.select = False
+
+	def PostSplitCleanUp(self, plane, object_to_split):
+		"""Removes small parts of mesh and clears object materials"""
+		objects = bpy.data.objects
+		name = object_to_split.name
+		name = name.split('.')[0]
+
+		removed = 0
+
+		for obj in objects:
+			if obj.name.startswith(name):
+				object_removed = False
+
+				# Needs work to be more robust...
+				for dim in obj.dimensions:
+					if dim < 8:
+						object_removed = True
+						print(obj.name + ' REMOVED')
+						objects.remove(obj, True)
+						removed += 1
+						break
+
+				if not object_removed:
+					obj.data.materials.clear()
+
+		if removed > 0:
+			report = ({'WARNING'}, "Small parts removed")
+		else:
+			report = ({'INFO'}, "Finished Clean up")
+		return report
 
 class SurfaceCheck():
 	viable_split = False
@@ -109,10 +204,11 @@ class SurfaceCheck():
 			]
 		return edges
 
+
 def SurfaceUpdate(context):
 	objects = bpy.data.objects
 	surface_check = bpy.types.Scene.surface_check
-	#colours = bpy.types.Scene.colours
+	colours = bpy.types.Scene.colours
 
 	object_origins_to_surface = {}
 
@@ -127,49 +223,47 @@ def SurfaceUpdate(context):
 		surface_origin = surface.matrix_world.to_translation()
 
 		for obj in objects:
-			if obj.type == 'MESH' and obj.name != "SplitPlane":  # and obj.name != "BoundBoxSnap" and obj.name != chr(0x10ffff): #Last two are to stop errors with Enhanced 3D Cursor
+			if obj.type == 'MESH' and obj.name != "SplitPlane" and obj.hide == False:
 				obj_origin = obj.matrix_world.to_translation()
 				obj_to_surface = obj_origin - surface_origin
 				object_origins_to_surface[obj.name] = obj_to_surface.length
 
-				obj.show_bounds = False
-				# if obj.data.materials:
-				# 	obj.data.materials[0].diffuse_color = colours.default_colour
-				# else:
-				# 	colour = bpy.data.materials.new(name="default_colour")
-				# 	obj.data.materials.append(colour)
-				# 	obj.data.materials[0].diffuse_color = colours.default_colour
+				#obj.show_bounds = False
+				if obj.data.materials:
+					obj.data.materials[0].diffuse_color = colours.default_colour
+				else:
+					colour = bpy.data.materials.new(name="default_colour")
+					obj.data.materials.append(colour)
+					obj.data.materials[0].diffuse_color = colours.default_colour
 
 		if len(object_origins_to_surface) > 0 and bpy.context.mode == 'OBJECT':
 			nearest_object_name = min(object_origins_to_surface, key=object_origins_to_surface.get)
 			nearest_object = objects[nearest_object_name]
-			#nearest_object.data.materials[0].diffuse_color = colours.target_colour
-			nearest_object.show_bounds = True
+			#nearest_object.show_bounds = True
+			nearest_object.data.materials[0].diffuse_color = colours.target_colour
 
 			surface_check.nearest_object_name = nearest_object_name
 
 			if surface_check.CheckBoundingBox(context, surface, nearest_object):
 
 				if surface_check.CheckIntersection(context, surface, nearest_object):
-					#surface.data.materials[0].diffuse_color = colours.split_true
 					surface_check.viable_split = True
+					surface.data.materials[0].diffuse_color = colours.split_true
 				else:
-					#surface.data.materials[0].diffuse_color = colours.split_false
 					surface_check.viable_split = False
+					surface.data.materials[0].diffuse_color = colours.split_false
 			else:
-				#surface.data.materials[0].diffuse_color = colours.split_false
 				surface_check.viable_split = False
+				surface.data.materials[0].diffuse_color = colours.split_false
 
 
 	elif not surface_present:
-		# reset objects to grey
 		for obj in objects:
 			if obj.type == 'MESH':
-				obj.show_bounds = False
-				# if obj.data.materials:
-				# 	obj.data.materials[0].diffuse_color = colours.default_colour
-				# else:
-				# 	colour = bpy.data.materials.new(name="default_colour")
-				# 	obj.data.materials.append(colour)
-				# 	obj.data.materials[0].diffuse_color = colours.default_colour
-
+				#obj.show_bounds = False
+				if obj.data.materials:
+					obj.data.materials[0].diffuse_color = colours.default_colour
+				else:
+					colour = bpy.data.materials.new(name="default_colour")
+					obj.data.materials.append(colour)
+					obj.data.materials[0].diffuse_color = colours.default_colour

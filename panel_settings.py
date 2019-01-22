@@ -11,8 +11,8 @@ from bpy.props import (StringProperty,
 
 from .settings_utils import *
 
-class PanelSettings(bpy.types.PropertyGroup):
 
+class PanelSettings(bpy.types.PropertyGroup):
 	use_lego = BoolProperty(name="Use Lego Bricks", default=True)
 	use_nano = BoolProperty(name="Use NanoBlocks", default=False)
 	use_duplo = BoolProperty(name="Use Duplo Bricks", default=False)
@@ -20,7 +20,7 @@ class PanelSettings(bpy.types.PropertyGroup):
 	use_shell_as_bounds = BoolProperty(
 		name="Confine to Shell",
 		description="Constrains the LEGO bricks to within the shell",
-		default=False
+		default=True
 	)
 
 	show_hide_model = BoolProperty(
@@ -117,3 +117,8 @@ class PanelSettings(bpy.types.PropertyGroup):
 		min=1,
 		max=180
 	)
+
+	viable_split = BoolProperty(
+		name="Viable Split",
+		description="Checks if the Lego Surface will produce a viable split",
+		default=False)

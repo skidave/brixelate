@@ -6,10 +6,9 @@ from .settings_utils import getSettings
 from .lego_utils import legoData
 from .brixelate_funcs import brixelateFunctions, experimentation, ratio
 from .implementation import ImplementFuncs
+from .split import Split
 
 
-# TODO add studs and holes
-# TODO boolean intersection to 'remove' lego
 # TODO split 'shell' to make printable
 
 class simpleBrixelate(bpy.types.Operator):
@@ -207,7 +206,7 @@ class MergeTest(bpy.types.Operator):
 		bricks = 0
 		for ob in scene.objects:
 			if ob.name.startswith('Brick'):
-				bricks +=1
+				bricks += 1
 
 		if bricks > 0:
 			return True
@@ -220,3 +219,58 @@ class MergeTest(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		return self.execute(context)
+
+
+class AddSplitPlane(bpy.types.Operator):
+	"""Creates a plane to split objects with"""
+	bl_idname = "mesh.add_split_plane"
+	bl_label = "Add Split Plane"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		objects = bpy.data.objects
+		split_plane_present = 'SplitPlane' in objects
+
+		return not split_plane_present
+
+	def execute(self, context):
+		Split().add_plane(context)
+
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+class SplitObjectWithPlane(bpy.types.Operator):
+	"""Splits object with plane"""
+	bl_idname = "mesh.split_object"
+	bl_label = "Split Object"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		objects = bpy.data.objects
+		viable_split = bpy.types.Scene.surface_check.viable_split
+		split_plane_present = 'SplitPlane' in objects
+		object_to_split_present = len(objects) > 1
+		return split_plane_present and object_to_split_present and viable_split
+
+	def execute(self, context):
+		# objects = bpy.data.objects
+		# object_to_split_name = bpy.types.Scene.lego_surface_check.nearest_object_name
+		# print(object_to_split_name)
+		# object_to_split = objects[object_to_split_name]
+		# lego_surface = objects["Lego Surface"]
+		#
+		# male_side, female_side = self.BooleanDifference(lego_surface, object_to_split)
+		# self.AddStuds(lego_surface, female_side, True)
+		# self.AddStuds(lego_surface, male_side, False)
+		# self.PostSplitCleanUp(lego_surface, object_to_split)
+		Split().split_with_plane(context)
+
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+

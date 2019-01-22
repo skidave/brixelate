@@ -18,10 +18,13 @@ from .operators import (resetBrixelate,
 						experimentationBrixelate,
 						ratioBrixelate,
 						spinTest,
-						MergeTest
+						MergeTest,
+						AddSplitPlane,
+						SplitObjectWithPlane
 						)
 from .ui_panel import BrixelPanel
 from .panel_settings import PanelSettings
+from .split import SurfaceCheck, SurfaceUpdate
 
 classes = (
 	simpleBrixelate,
@@ -33,6 +36,9 @@ classes = (
 	spinTest,
 	MergeTest,
 
+	AddSplitPlane,
+	SplitObjectWithPlane,
+
 	BrixelPanel,
 	PanelSettings)
 
@@ -41,14 +47,20 @@ def register():
 	for c in classes:
 		register_class(c)
 
+	bpy.app.handlers.scene_update_post.clear()  # for testing
+	bpy.app.handlers.scene_update_post.append(SurfaceUpdate)
+
+	bpy.types.Scene.surface_check = SurfaceCheck()
 	bpy.types.Scene.my_settings = bpy.props.PointerProperty(type=PanelSettings)
+
 
 def unregister():
 	for c in classes:
 		unregister_class(c)
 
 	del bpy.types.Scene.my_settings
+	del bpy.types.Scene.surface_check
+
 
 if __name__ == "__main__":
 	register()
-

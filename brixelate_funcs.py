@@ -109,8 +109,8 @@ class brixelateFunctions():
 																		   bricks_to_use,
 																		   add_bricks=add_bricks)
 
-			print(bricks_array)
-			print(packed_brick_array)
+			#print(bricks_array)
+			#print(packed_brick_array)
 			ImplementData.array = packed_brick_array
 		bm = bmesh.new()
 		bm.from_mesh(object_selected.data)

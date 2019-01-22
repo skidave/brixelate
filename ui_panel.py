@@ -90,10 +90,13 @@ class BrixelPanel(bpy.types.Panel):
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
 
 		layout.separator()
-		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
+		layout.operator("tool.merge_test", text="Create Shell", icon="UV_FACESEL")
 
 		layout.separator()
-		layout.operator("tool.merge_test", text="TEST", icon="QUESTION")
+		row = layout.row()
+		row.operator("mesh.add_split_plane", text="Add Plane", icon="MESH_PLANE")
+		row.operator("mesh.split_object", text="Split", icon="MOD_BOOLEAN")
+
 
 		if len(scene.objects) > 0:
 
@@ -110,6 +113,9 @@ class BrixelPanel(bpy.types.Panel):
 				row.label(text="LEGO", icon="GROUP_VERTEX")
 				row.prop(settings, "show_hide_lego", text=("Visible" if settings.show_hide_lego else "Hidden"),
 						 toggle=True)
+
+		layout.separator()
+		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
 
 		layout.separator()
 		box = layout.box()

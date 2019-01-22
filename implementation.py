@@ -57,7 +57,7 @@ class ImplementFuncs():
 		mesh.select_all(action="SELECT")
 		mesh.dissolve_limited()
 
-		print("Object Mode")
+		#print("Object Mode")
 		bpy.ops.object.mode_set(mode='OBJECT')
 
 		cylinder_types = ['STUD', 'HOLE']
@@ -100,11 +100,12 @@ class ImplementFuncs():
 		lego_bool = main_obj.modifiers.new(type="BOOLEAN", name="lego bool")
 		lego_bool.object = joined_bricks
 		lego_bool.operation = 'DIFFERENCE'
-		joined_bricks.hide = True
+		#joined_bricks.hide = True
 
 		bpy.ops.object.modifier_apply(apply_as='DATA', modifier="lego bool")
 
-	# hole.hide = True
+		bpy.data.objects.remove(joined_bricks, True)
+
 
 	def add_temp_bricks(self, array, start_point, name):
 		z_array, y_array, x_array = array.shape[0], array.shape[1], array.shape[2]

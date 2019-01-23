@@ -17,16 +17,16 @@ class BrixelPanel(bpy.types.Panel):
 		layout = self.layout
 		col = layout.column(align=True)
 		box = col.box()
-		box.label("Brick Types", icon="GROUP_VERTEX")
+		# box.label("Brick Types", icon="GROUP_VERTEX")
 
-		row = box.row(align=True)
-		row.prop(settings, "use_nano", text="NanoBlocks", icon="FILE_TICK" if settings.use_nano else "RADIOBUT_OFF",
-				 toggle=True)
-		row.prop(settings, "use_lego", text="LEGO Bricks", icon="FILE_TICK" if settings.use_lego else "RADIOBUT_OFF",
-				 toggle=True)
-		row.prop(settings, "use_duplo", text="Duplo Bricks", icon="FILE_TICK" if settings.use_duplo else "RADIOBUT_OFF",
-				 toggle=True)
-		box.prop(settings, "use_shell_as_bounds")
+		# row = box.row(align=True)
+		# row.prop(settings, "use_nano", text="NanoBlocks", icon="FILE_TICK" if settings.use_nano else "RADIOBUT_OFF",
+		# 		 toggle=True)
+		# row.prop(settings, "use_lego", text="LEGO Bricks", icon="FILE_TICK" if settings.use_lego else "RADIOBUT_OFF",
+		# 		 toggle=True)
+		# row.prop(settings, "use_duplo", text="Duplo Bricks", icon="FILE_TICK" if settings.use_duplo else "RADIOBUT_OFF",
+		# 		 toggle=True)
+		# box.prop(settings, "use_shell_as_bounds")
 
 		if settings.use_lego:
 			box.label("LEGO Brick Layout", icon="SCRIPT")  # or SCRIPTWIN
@@ -88,15 +88,20 @@ class BrixelPanel(bpy.types.Panel):
 
 		row = box.row()
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
+		row = box.row()
+		row.operator("tool.merge_test", text="Create Shell", icon="UGLYPACKAGE")
+
+		# layout.separator()
+		# layout.operator("tool.merge_test", text="Create Shell", icon="UV_FACESEL")
 
 		layout.separator()
-		layout.operator("tool.merge_test", text="Create Shell", icon="UV_FACESEL")
-
-		layout.separator()
-		row = layout.row()
+		box=layout.box()
+		box.label("Segmentation", icon="MESH_GRID")
+		row = box.row()
 		row.operator("mesh.add_split_plane", text="Add Plane", icon="MESH_PLANE")
+		row = box.row()
+		row.prop(settings, "displace_split")
 		row.operator("mesh.split_object", text="Split", icon="MOD_BOOLEAN")
-
 
 		if len(scene.objects) > 0:
 

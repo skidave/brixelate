@@ -122,3 +122,8 @@ class PanelSettings(bpy.types.PropertyGroup):
 		name="Viable Split",
 		description="Checks if the Lego Surface will produce a viable split",
 		default=False)
+
+	displace_split = BoolProperty(
+		name="Displace Objects",
+		description="Displaces resultant objects from plane split",
+		default=False)

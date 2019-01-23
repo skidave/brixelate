@@ -6,6 +6,8 @@ import bmesh
 import mathutils
 from mathutils import Vector
 
+from .settings_utils import getSettings
+
 
 class Colours():
 	default_colour = (0.7, 0.7, 0.7)
@@ -47,7 +49,7 @@ class Split():
 		object_to_split = objects[object_to_split_name]
 		surface = objects["SplitPlane"]
 
-		self.BooleanDifference(surface, object_to_split, displace=True)
+		self.BooleanDifference(surface, object_to_split, displace=getSettings().displace_split)
 		report = self.PostSplitCleanUp(surface, object_to_split)
 		return report
 
@@ -116,7 +118,7 @@ class Split():
 
 				# Needs work to be more robust...
 				for dim in obj.dimensions:
-					if dim < 8:
+					if dim < 1:
 						object_removed = True
 						print(obj.name + ' REMOVED')
 						objects.remove(obj, True)

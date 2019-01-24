@@ -14,7 +14,7 @@ from .mesh_utils import getVertices, getEdges, rayInside, get_angles
 from .lego_utils import legoData
 from .settings_utils import getSettings
 from .file_utils import csv_header, csv_write
-from .implementation import ImplementData
+from .implementData import ImplementData
 
 
 class brixelateFunctions():
@@ -110,8 +110,11 @@ class brixelateFunctions():
 																		   add_bricks=add_bricks)
 
 			#print(bricks_array)
-			#print(packed_brick_array)
+			print(packed_brick_array)
 			ImplementData.array = packed_brick_array
+			# Filter usedbrick dictionary to only include those where the count is > 0
+			ImplementData.used_bricks = {brick: value for brick, value in used_bricks_dict.items() if value['count'] > 0}
+			print(ImplementData.used_bricks)
 		bm = bmesh.new()
 		bm.from_mesh(object_selected.data)
 		bmesh.ops.triangulate(bm, faces=bm.faces)
@@ -262,6 +265,11 @@ class brixelateFunctions():
 
 									brick_name = legoData().brickName(piece)
 									used_bricks_dict[brick_name]['count'] += 1
+
+									if used_bricks_dict[brick_name]['count'] == 1:
+										used_bricks_dict[brick_name]['ids'] = [brick_num]
+									else:
+										used_bricks_dict[brick_name]['ids'].append(brick_num)
 
 									for p in p_list:
 										opt_bricks[p[0], p[1], p[2]] = brick_num

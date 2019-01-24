@@ -9,19 +9,12 @@ from mathutils import Vector
 from .settings_utils import getSettings
 
 
-class Colours():
-	default_colour = (0.7, 0.7, 0.7)
-	target_colour = (0.0, 0.3, 1)
-	split_true = (0.1, 0.8, 0.1)
-	split_false = (0.8, 0, 0)
-
 
 class Split():
 
-	def add_plane(self, context):
+	def add_plane(self, context, colour, size=50, location=bpy.context.scene.cursor_location):
 		ops = bpy.ops
-		cursor_location = bpy.context.scene.cursor_location
-		ops.mesh.primitive_plane_add(radius=50, location=cursor_location)
+		ops.mesh.primitive_plane_add(radius=size, location=location)
 		split_plane = context.selected_objects[0]
 		split_plane.name = "SplitPlane"
 
@@ -34,10 +27,11 @@ class Split():
 
 		split_plane.lock_scale = [False, False, True]  # locks scaling in z (thickness) axis
 
-		colours = bpy.types.Scene.colours  # loads colours from separate class
-		colour = bpy.data.materials.new(name="default_colour")
-		split_plane.data.materials.append(colour)
-		split_plane.data.materials[0].diffuse_color = colours.default_colour
+		if colour:
+			colours = bpy.types.Scene.colours  # loads colours from separate class
+			colour = bpy.data.materials.new(name="default_colour")
+			split_plane.data.materials.append(colour)
+			split_plane.data.materials[0].diffuse_color = colours.default_colour
 
 		split_plane.select = True
 		bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')

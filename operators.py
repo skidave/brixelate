@@ -235,7 +235,7 @@ class AddSplitPlane(bpy.types.Operator):
 		return not split_plane_present
 
 	def execute(self, context):
-		Split().add_plane(context)
+		Split().add_plane(context, colour=True)
 
 		return {"FINISHED"}
 
@@ -265,4 +265,25 @@ class SplitObjectWithPlane(bpy.types.Operator):
 
 	def invoke(self, context, event):
 		return self.execute(context)
+
+class automatedSplitting(bpy.types.Operator):
+	"""Splits object with plane"""
+	bl_idname = "mesh.auto_split_object"
+	bl_label = "Automated Splitting"
+	bl_options = {"UNDO"}
+
+	# @classmethod
+	# def poll(self, context):
+	# 	objects = bpy.data.objects
+	# 	viable_split = bpy.types.Scene.surface_check.viable_split
+	# 	split_plane_present = 'SplitPlane' in objects
+	# 	object_to_split_present = len(objects) > 1
+	# 	return split_plane_present and object_to_split_present and viable_split
+
+	def execute(self, context):
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
 

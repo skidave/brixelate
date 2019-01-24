@@ -7,12 +7,7 @@ from mathutils import Vector
 import numpy as np
 
 from .lego_utils import legoData
-
-
-class ImplementData():
-	object_name = None
-	start_point = None
-	array = None
+from .implementData import ImplementData
 
 
 class ImplementFuncs():
@@ -23,6 +18,8 @@ class ImplementFuncs():
 
 		array = ImplementData.array
 		start_point = ImplementData.start_point
+		print(start_point)
+
 		name = ImplementData.object_name
 		main_obj = scene.objects[name]
 

@@ -107,6 +107,9 @@ class BrixelPanel(bpy.types.Panel):
 		row.operator("mesh.add_split_plane", text="Add Plane", icon="MESH_PLANE")
 		row = box.row()
 		row.prop(settings, "displace_split")
+		row.prop(settings, "lock_objects",text=("Lock Objects" if settings.lock_objects else "Unlock Objects"), toggle=True)
+		row = box.row()
+
 		row.operator("mesh.split_object", text="Split", icon="MOD_BOOLEAN")
 
 		if len(scene.objects) > 0:

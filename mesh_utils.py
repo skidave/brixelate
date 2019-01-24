@@ -3,6 +3,15 @@ from mathutils import Vector, Quaternion
 import numpy as np
 
 
+def homeObject(obj):
+	obj.select = True
+	bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
+	bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+	obj.location = [0, 0, obj.dimensions[2] / 2]
+	obj.lock_location = [True, True, True]
+	bpy.context.scene.my_settings.lock_objects=False
+
+
 def getVertices(pos, w, d, h):
 	vertices = \
 		[

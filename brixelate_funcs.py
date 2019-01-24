@@ -10,7 +10,7 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 
-from .mesh_utils import getVertices, getEdges, rayInside, get_angles
+from .mesh_utils import getVertices, getEdges, rayInside, get_angles, homeObject
 from .lego_utils import legoData
 from .settings_utils import getSettings
 from .file_utils import csv_header, csv_write
@@ -19,6 +19,8 @@ from .implementData import ImplementData
 
 class brixelateFunctions():
 	def brixelate(self, scene, object_selected, **kwargs):
+
+		homeObject(object_selected)
 
 		use_shell_as_bounds = getSettings().use_shell_as_bounds
 		bricks_to_use = legoData().listOfBricksToUse()
@@ -88,7 +90,7 @@ class brixelateFunctions():
 
 		ImplementData.start_point = start_point
 
-		ImplementData.object_name  = object_selected.name
+		ImplementData.object_name = object_selected.name
 
 		if 'output' in kwargs:
 			if kwargs['output']:
@@ -105,16 +107,19 @@ class brixelateFunctions():
 
 			ImplementData.array = bricks_array
 		else:
-			lego_volume, used_bricks_dict, brick_count, packed_brick_array = self.brickPacking(scene, bricks_array, start_point,
-																		   bricks_to_use,
-																		   add_bricks=add_bricks)
+			lego_volume, used_bricks_dict, brick_count, packed_brick_array = self.brickPacking(scene, bricks_array,
+																							   start_point,
+																							   bricks_to_use,
+																							   add_bricks=add_bricks)
 
-			#print(bricks_array)
-			print(packed_brick_array)
+			# print(bricks_array)
+			# print(packed_brick_array)
 			ImplementData.array = packed_brick_array
+			ImplementData.brick_count = brick_count
 			# Filter usedbrick dictionary to only include those where the count is > 0
-			ImplementData.used_bricks = {brick: value for brick, value in used_bricks_dict.items() if value['count'] > 0}
-			print(ImplementData.used_bricks)
+			ImplementData.used_bricks = {brick: value for brick, value in used_bricks_dict.items() if
+										 value['count'] > 0}
+		# print(ImplementData.used_bricks)
 		bm = bmesh.new()
 		bm.from_mesh(object_selected.data)
 		bmesh.ops.triangulate(bm, faces=bm.faces)
@@ -296,7 +301,6 @@ class brixelateFunctions():
 
 		brick_count = brick_num - 1
 
-
 		packed_brick_array = copy.copy(opt_bricks)
 
 		end_time = time.time()
@@ -441,19 +445,19 @@ def ratio(context, method):
 		yaw_angs = get_angles(yaw_pts)
 		pos_i = 1
 		if not spin:
-			rpy= [(0,0,0)]
+			rpy = [(0, 0, 0)]
 		else:
-			base = [(0,0,0)]
+			base = [(0, 0, 0)]
 			pitch = []
 			roll = []
 			yaw = []
 
 			for r in roll_angs:
-				roll.append((0,r,0))
+				roll.append((0, r, 0))
 			for p in pitch_angs:
-				pitch.append((p,0,0))
+				pitch.append((p, 0, 0))
 			for y in yaw_angs:
-				yaw.append((0,0,y))
+				yaw.append((0, 0, y))
 
 			rpy = base + pitch + roll + yaw
 		print(rpy)

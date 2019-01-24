@@ -25,7 +25,7 @@ from .operators import (resetBrixelate,
 						)
 from .ui_panel import BrixelPanel
 from .panel_settings import PanelSettings
-from .split import SurfaceCheck, SurfaceUpdate
+from .surfaceCheck import SurfaceCheck, SurfaceUpdate
 from .colours import Colours
 
 classes = (

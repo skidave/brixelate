@@ -44,3 +44,13 @@ def allBricks(self, context):
 	for i, p in enumerate(settings.bricks2):
 		settings.bricks2[i] = val
 	return None
+
+
+def lockObjects(self, context):
+	scene = bpy.context.scene
+
+	val = not scene.my_settings.lock_objects
+	for ob in scene.objects:
+		if ob.name is not 'SplitPlane':
+			ob.lock_location = [val, val, val]
+	return None

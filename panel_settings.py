@@ -127,3 +127,9 @@ class PanelSettings(bpy.types.PropertyGroup):
 		name="Displace Objects",
 		description="Displaces resultant objects from plane split",
 		default=False)
+
+	lock_objects = BoolProperty(
+		name="Lock Objects",
+		description="Locks Objects",
+		default=False,
+		update=lockObjects)

@@ -5,18 +5,20 @@ import bpy
 import bmesh
 import mathutils
 from mathutils import Vector
+import numpy as np
 
 from .settings_utils import getSettings
+from .implementData import ImplementData
 
 
 
 class Split():
 
-	def add_plane(self, context, colour, size=50, location=bpy.context.scene.cursor_location):
+	def add_plane(self, context, colour, size=50, location=bpy.context.scene.cursor_location, name="SplitPlane"):
 		ops = bpy.ops
 		ops.mesh.primitive_plane_add(radius=size, location=location)
 		split_plane = context.selected_objects[0]
-		split_plane.name = "SplitPlane"
+		split_plane.name = name
 
 		# Solidifies plane to ensure difference operation works
 		bpy.context.scene.objects.active = split_plane
@@ -128,138 +130,71 @@ class Split():
 			report = ({'INFO'}, "Finished Clean up")
 		return report
 
-class SurfaceCheck():
-	viable_split = False
 
-	nearest_object_name = ''
-
-	def CheckBoundingBox(self, context, plane, object_to_split):
-
-		# object_vertices = [object_to_split.matrix_world * Vector(corner) for corner in object_to_split.bound_box]
-		plane_vertices = [plane.matrix_world * Vector(corner) for corner in plane.bound_box]
-		plane_edges = self.ReturnEdgesFromVertices(plane_vertices)
-
-		world_to_obj = object_to_split.matrix_world.inverted()
-
-		i = 0
-		for e in plane_edges:
-			start, end = e
-			dist = (world_to_obj * end - world_to_obj * start).length
-			ray_dir = world_to_obj * end - world_to_obj * start
-			ray_dir.normalize()
-			f = object_to_split.ray_cast(world_to_obj * start, ray_dir, dist)
-			hit, loc, normal, face_idx = f
-
-			if hit:
-				i += 1
-
-		if i == 0:
-			intersection = False
+	def add_auto_planes(self, context):
+		obj = bpy.data.objects[ImplementData.object_name]
+		x,y = obj.dimensions[0], obj.dimensions[1]
+		if x > y:
+			size = x
 		else:
-			intersection = True
-
-		return not intersection
-
-	def CheckIntersection(self, context, plane, object_to_split):
-
-		BVHTree = mathutils.bvhtree.BVHTree
-		# create bmesh objects
-		plane_bmesh = bmesh.new()
-		object_bmesh = bmesh.new()
-		plane_bmesh.from_mesh(plane.data)
-		object_bmesh.from_mesh(object_to_split.data)
-
-		plane_bmesh.transform(plane.matrix_world)
-		object_bmesh.transform(object_to_split.matrix_world)
-
-		# make BVH tree from BMesh of objects
-		plane_BVHtree = BVHTree.FromBMesh(plane_bmesh)
-		object_BVHtree = BVHTree.FromBMesh(object_bmesh)
-
-		# get intersecting pairs
-		inter = plane_BVHtree.overlap(object_BVHtree)
-
-		# if list is empty, no objects are touching
-		if inter != []:
-			touching = True
-		else:
-			touching = False
-
-		return touching
-
-	def ReturnEdgesFromVertices(self, vertices):
-		edges = \
-			[
-				[vertices[0], vertices[3]],
-				[vertices[3], vertices[7]],
-				[vertices[7], vertices[4]],
-				[vertices[1], vertices[2]],
-				[vertices[2], vertices[6]],
-				[vertices[6], vertices[5]],
-				[vertices[5], vertices[1]]
-			]
-		return edges
+			size = y
 
 
-def SurfaceUpdate(context):
-	objects = bpy.data.objects
-	surface_check = bpy.types.Scene.surface_check
-	colours = bpy.types.Scene.colours
+		start_point = ImplementData.start_point
+		array = ImplementData.array
+		count = ImplementData.brick_count
 
-	object_origins_to_surface = {}
+		zpositions = self.find_plane_positions(start_point, array, count)
 
-	surface_present = "SplitPlane" in objects
-	num_mesh_objects = 0
-	for obj in objects:
-		if obj.type == 'MESH':
-			num_mesh_objects += 1
+		self.add_plane(context, colour=False, size=size, location=start_point, name='TEST')
 
-	if surface_present and num_mesh_objects > 1 and objects.is_updated:
-		surface = objects["SplitPlane"]
-		surface_origin = surface.matrix_world.to_translation()
+	def find_plane_positions(self, start_point, array, count):
+		"""Returns a list of zpositions"""
+		zpositions = []
 
-		for obj in objects:
-			if obj.type == 'MESH' and obj.name != "SplitPlane" and obj.hide == False:
-				obj_origin = obj.matrix_world.to_translation()
-				obj_to_surface = obj_origin - surface_origin
-				object_origins_to_surface[obj.name] = obj_to_surface.length
+		for id in range(1, count+1):
+			print('index: ' + str(id))
+			indices = np.argwhere(array==id)
+			#returns [z,y,x]
+			print(indices)
+			bottomleft = np.min(indices, axis=0)
+			bottom = bottomleft[0]
+			topright = np.max(indices, axis=0)
+			top = topright[0]
 
-				#obj.show_bounds = False
-				if obj.data.materials:
-					obj.data.materials[0].diffuse_color = colours.default_colour
-				else:
-					colour = bpy.data.materials.new(name="default_colour")
-					obj.data.materials.append(colour)
-					obj.data.materials[0].diffuse_color = colours.default_colour
+			yrange = np.arange(bottomleft[1],topright[1]+1)
+			xrange = np.arange(bottomleft[2],topright[2]+1)
 
-		if len(object_origins_to_surface) > 0 and bpy.context.mode == 'OBJECT':
-			nearest_object_name = min(object_origins_to_surface, key=object_origins_to_surface.get)
-			nearest_object = objects[nearest_object_name]
-			#nearest_object.show_bounds = True
-			nearest_object.data.materials[0].diffuse_color = colours.target_colour
+			new_indices = np.empty([yrange.size*xrange.size,2])
+			i = 0
+			for y in yrange:
+				for x in xrange:
+					#test_ind = [y,x]
+					new_indices[i][0] = y
+					new_indices[i][1] = x
+					i += 1
+			print(new_indices)
 
-			surface_check.nearest_object_name = nearest_object_name
+			covered_count = 0
+			for ind in new_indices:
+				print(ind)
+				y = int(ind[0])
+				x = int(ind[1])
 
-			if surface_check.CheckBoundingBox(context, surface, nearest_object):
+				above = array[top+1][y][x]
+				below = array[bottom-1][y][x]
+				print("above: {}, below: {}".format(above,below))
+				if below <= 0 or above <= 0:
+					covered_count +=1
 
-				if surface_check.CheckIntersection(context, surface, nearest_object):
-					surface_check.viable_split = True
-					surface.data.materials[0].diffuse_color = colours.split_true
-				else:
-					surface_check.viable_split = False
-					surface.data.materials[0].diffuse_color = colours.split_false
-			else:
-				surface_check.viable_split = False
-				surface.data.materials[0].diffuse_color = colours.split_false
+			if covered_count > 0:
+				z_index = int((top - bottom)/2 + bottom)
+				zpositions.append(z_index)
 
 
-	elif not surface_present:
-		for obj in objects:
-			if obj.type == 'MESH':
-				#obj.show_bounds = False
-				if obj.data.materials:
-					obj.data.materials[0].diffuse_color = colours.default_colour
-				else:
-					colour = bpy.data.materials.new(name="default_colour")
-					obj.data.materials.append(colour)
-					obj.data.materials[0].diffuse_color = colours.default_colour
+
+		print(zpositions)
+
+
+
+		return zpositions

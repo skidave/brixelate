@@ -7,6 +7,7 @@ from .lego_utils import legoData
 from .brixelate_funcs import brixelateFunctions, experimentation, ratio
 from .implementation import ImplementFuncs
 from .split import Split
+from .implementData import ImplementData
 
 
 # TODO split 'shell' to make printable
@@ -215,6 +216,11 @@ class MergeTest(bpy.types.Operator):
 
 		ImplementFuncs().bricks_boolean(context.scene)
 
+		string = "Brick "
+		for ob in context.scene.objects:
+			if ob.name.startswith(string):
+				ob.hide = True
+
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
@@ -272,15 +278,16 @@ class automatedSplitting(bpy.types.Operator):
 	bl_label = "Automated Splitting"
 	bl_options = {"UNDO"}
 
-	# @classmethod
-	# def poll(self, context):
-	# 	objects = bpy.data.objects
-	# 	viable_split = bpy.types.Scene.surface_check.viable_split
-	# 	split_plane_present = 'SplitPlane' in objects
-	# 	object_to_split_present = len(objects) > 1
-	# 	return split_plane_present and object_to_split_present and viable_split
+	@classmethod
+	def poll(self, context):
+		objects = bpy.data.objects
+		start = ImplementData.start_point is not None
+		obj_present = ImplementData.object_name in objects
+
+		return start and obj_present
 
 	def execute(self, context):
+		Split().add_auto_planes(context)
 		return {"FINISHED"}
 
 	def invoke(self, context, event):

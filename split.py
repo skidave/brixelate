@@ -9,7 +9,7 @@ import numpy as np
 
 from .settings_utils import getSettings
 from .implementData import ImplementData
-
+from .lego_utils import legoData
 
 
 class Split():
@@ -41,14 +41,13 @@ class Split():
 	def split_with_plane(self, context):
 		objects = bpy.data.objects
 		object_to_split_name = bpy.types.Scene.surface_check.nearest_object_name
-		#print(object_to_split_name)
+		# print(object_to_split_name)
 		object_to_split = objects[object_to_split_name]
 		surface = objects["SplitPlane"]
 
 		self.BooleanDifference(surface, object_to_split, displace=getSettings().displace_split)
 		report = self.PostSplitCleanUp(surface, object_to_split)
 		return report
-
 
 	def BooleanDifference(self, plane, object_to_split, displace):
 		ops = bpy.ops
@@ -130,15 +129,13 @@ class Split():
 			report = ({'INFO'}, "Finished Clean up")
 		return report
 
-
 	def add_auto_planes(self, context):
 		obj = bpy.data.objects[ImplementData.object_name]
-		x,y = obj.dimensions[0], obj.dimensions[1]
+		x, y = obj.dimensions[0], obj.dimensions[1]
 		if x > y:
 			size = x
 		else:
 			size = y
-
 
 		start_point = ImplementData.start_point
 		array = ImplementData.array
@@ -146,55 +143,67 @@ class Split():
 
 		zpositions = self.find_plane_positions(start_point, array, count)
 
-		self.add_plane(context, colour=False, size=size, location=start_point, name='TEST')
+		for z in zpositions:
+			self.add_plane(context, colour=False, size=size, location=z, name='TEST')
 
 	def find_plane_positions(self, start_point, array, count):
 		"""Returns a list of zpositions"""
 		zpositions = []
+		w, d, h = legoData.getDims()
 
-		for id in range(1, count+1):
-			print('index: ' + str(id))
-			indices = np.argwhere(array==id)
-			#returns [z,y,x]
-			print(indices)
+		midpoint = [int((i - 1) / 2) for i in array.shape]
+		midpointZ = midpoint[0]
+
+		plane_offset = Vector((0,0,1.0))
+		#print(start_point)  # x,y,z
+
+		#print("array size: {}".format(array.shape))
+		#print(midpoint)  # z,y,x
+
+		for id in range(1, count + 1):
+			# print('index: ' + str(id))
+			indices = np.argwhere(array == id)
+			# returns [z,y,x]
+			# print(indices)
 			bottomleft = np.min(indices, axis=0)
 			bottom = bottomleft[0]
 			topright = np.max(indices, axis=0)
 			top = topright[0]
 
-			yrange = np.arange(bottomleft[1],topright[1]+1)
-			xrange = np.arange(bottomleft[2],topright[2]+1)
+			yrange = np.arange(bottomleft[1], topright[1] + 1)
+			xrange = np.arange(bottomleft[2], topright[2] + 1)
 
-			new_indices = np.empty([yrange.size*xrange.size,2])
+			new_indices = np.empty([yrange.size * xrange.size, 2])
 			i = 0
 			for y in yrange:
 				for x in xrange:
-					#test_ind = [y,x]
+					# test_ind = [y,x]
 					new_indices[i][0] = y
 					new_indices[i][1] = x
 					i += 1
-			print(new_indices)
+			# print(new_indices)
 
 			covered_count = 0
 			for ind in new_indices:
-				print(ind)
+				# print(ind)
 				y = int(ind[0])
 				x = int(ind[1])
 
-				above = array[top+1][y][x]
-				below = array[bottom-1][y][x]
-				print("above: {}, below: {}".format(above,below))
+				above = array[top + 1][y][x]
+				below = array[bottom - 1][y][x]
+				# print("above: {}, below: {}".format(above, below))
 				if below <= 0 or above <= 0:
-					covered_count +=1
+					covered_count += 1
 
 			if covered_count > 0:
-				z_index = int((top - bottom)/2 + bottom)
+				z_index = int((top - bottom) / 2 + bottom)
 				zpositions.append(z_index)
 
+		zpositions = list(set(zpositions))
 
+		z_world = [Vector((0,0, (z - midpointZ)*h)) + start_point + plane_offset for z in zpositions]
 
 		print(zpositions)
+		print(z_world)
 
-
-
-		return zpositions
+		return z_world

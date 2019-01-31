@@ -198,6 +198,8 @@ class Split():
 			if covered_count > 0:
 				z_index = int((top - bottom) / 2 + bottom)
 				zpositions.append(z_index)
+				#TODO find critical planes, ie plates
+				# TODO find brick possible planes, e.g. find over lap [1,2,3], [3,4,5], only need a cut a 3
 
 		zpositions = list(set(zpositions))
 

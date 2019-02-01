@@ -149,16 +149,18 @@ class Split():
 	def find_plane_positions(self, start_point, array, count):
 		"""Returns a list of zpositions"""
 		zpositions = []
+		possible_positions = []
+		critical_positions = []
 		w, d, h = legoData.getDims()
 
 		midpoint = [int((i - 1) / 2) for i in array.shape]
 		midpointZ = midpoint[0]
 
-		plane_offset = Vector((0,0,1.0))
-		#print(start_point)  # x,y,z
+		plane_offset = Vector((0, 0, 1.0))
+		# print(start_point)  # x,y,z
 
-		#print("array size: {}".format(array.shape))
-		#print(midpoint)  # z,y,x
+		# print("array size: {}".format(array.shape))
+		# print(midpoint)  # z,y,x
 
 		for id in range(1, count + 1):
 			# print('index: ' + str(id))
@@ -198,14 +200,57 @@ class Split():
 			if covered_count > 0:
 				z_index = int((top - bottom) / 2 + bottom)
 				zpositions.append(z_index)
-				#TODO find critical planes, ie plates
-				# TODO find brick possible planes, e.g. find over lap [1,2,3], [3,4,5], only need a cut a 3
+				if top == bottom:
+					critical_positions.append(z_index)
+				else:
+					brick_positions = [bottom, z_index, top]
+					possible_positions.append(brick_positions)
+		# TODO find brick possible planes, e.g. find over lap [1,2,3], [3,4,5], only need a cut a 3
+
+		possible_positions = [list(x) for x in set(tuple(x) for x in possible_positions)]
 
 		zpositions = list(set(zpositions))
 
-		z_world = [Vector((0,0, (z - midpointZ)*h)) + start_point + plane_offset for z in zpositions]
+		overlap = {}
+		for pos in zpositions:
+			o_count = 0
+			for brick in possible_positions:
+				if pos in brick:
+					o_count += 1
+			if o_count in overlap:
+				overlap[o_count].append(pos)
+			else:
+				overlap[o_count] = [pos]
 
-		print(zpositions)
+		print("brick positions:")
+		print(possible_positions)
+
+		print("cricital positions:")
+		print(critical_positions)
+
+		print('overlap')
+		print(overlap)
+
+		new_z = []
+		keys = list(overlap.keys())
+		keys.sort(reverse=True)
+		for key in keys:
+			overlap[key].sort()
+			for pos in overlap[key]:
+				remove_count = 0
+				brick_to_remove = []
+				for brick in possible_positions:
+
+					if pos in brick:
+						brick_to_remove.append(brick)
+						remove_count += 1
+				if remove_count == key:
+					for brick in brick_to_remove:
+						possible_positions.remove(brick)
+					new_z.append(pos)
+		# TODO add compulsory planes
+		print(new_z)
+		z_world = [Vector((0, 0, (z - midpointZ) * h)) + start_point + plane_offset for z in new_z]
 		print(z_world)
 
 		return z_world

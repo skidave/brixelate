@@ -288,6 +288,7 @@ class automatedSplitting(bpy.types.Operator):
 
 	def execute(self, context):
 		Split().add_auto_planes(context)
+
 		return {"FINISHED"}
 
 	def invoke(self, context, event):

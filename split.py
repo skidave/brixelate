@@ -144,7 +144,10 @@ class Split():
 		zpositions = self.find_plane_positions(start_point, array, count)
 
 		for z in zpositions:
-			self.add_plane(context, colour=False, size=size, location=z, name='TEST')
+			self.add_plane(context, colour=False, size=size, location=z, name='SplitPlane')
+
+		#Join all planes together into one object
+		self.boolean_planes()
 
 	def find_plane_positions(self, start_point, array, count):
 		"""Returns a list of zpositions"""
@@ -254,3 +257,57 @@ class Split():
 		print(z_world)
 
 		return z_world
+
+	def boolean_planes(self):
+		objs = bpy.data.objects
+		for obj in objs:
+			obj.select = False
+			if obj.name.startswith('SplitPlane'):
+				obj.select = True
+
+		bpy.ops.object.make_single_user(object=True, obdata=True)
+		bpy.ops.object.convert(target='MESH')
+
+		obj = bpy.context.active_object
+		obj.select = False
+		obs = bpy.context.selected_objects
+
+		self.mesh_selection(obj, 'DESELECT')
+		for ob in obs:
+			self.mesh_selection(ob, 'SELECT')
+			self.boolean_mod(obj, ob, 'UNION')
+		obj.select = True
+		obj.modifiers.new(type='TRIANGULATE', name="triang")
+		bpy.ops.object.modifier_apply(apply_as='DATA', modifier="triang")
+
+
+	def mesh_selection(self, ob, select_action):
+		scene = bpy.context.scene
+		obj = bpy.context.active_object
+
+		scene.objects.active = ob
+		bpy.ops.object.mode_set(mode='EDIT')
+
+		bpy.ops.mesh.reveal()
+		bpy.ops.mesh.select_all(action=select_action)
+
+		bpy.ops.object.mode_set(mode='OBJECT')
+		scene.objects.active = obj
+
+	def boolean_mod(self, obj, ob, mode, ob_delete=True):
+		md = obj.modifiers.new("Auto Boolean", 'BOOLEAN')
+		md.show_viewport = False
+		md.operation = mode
+		md.solver = "BMESH"
+		md.object = ob
+
+		bpy.ops.object.modifier_apply(modifier="Auto Boolean")
+		if not ob_delete:
+			return
+		bpy.context.scene.objects.unlink(ob)
+		bpy.data.objects.remove(ob)
+
+	def plane_bool_difference(self, object, planes):
+		#TODO make the boolean difference between planes and object
+		scene = bpy.context.scene
+		scene.objects.active = object

@@ -5,9 +5,12 @@ import bpy
 from .settings_utils import getSettings
 from .lego_utils import legoData
 from .brixelate_funcs import brixelateFunctions, experimentation, ratio
+from .simple_brixelate import SimpleBrixelate
 from .implementation import ImplementFuncs
 from .split import Split
+from .auto_split import AutoSplit
 from .implementData import ImplementData
+from .mesh_utils import add_plane
 
 
 # TODO split 'shell' to make printable
@@ -27,9 +30,10 @@ class simpleBrixelate(bpy.types.Operator):
 					return True
 
 	def execute(self, context):
-		object_selected = context.selected_objects[0]
+		target_object = context.selected_objects[0]
 
-		brixelateFunctions().brixelate(context.scene, object_selected)
+		#brixelateFunctions().brixelate(context.scene, object_selected)
+		SimpleBrixelate(context, target_object)
 		self.report({"INFO"}, "Brixelate finished")
 
 		return {'FINISHED'}
@@ -241,12 +245,13 @@ class AddSplitPlane(bpy.types.Operator):
 		return not split_plane_present
 
 	def execute(self, context):
-		Split().add_plane(context, colour=True)
+		add_plane(context, colour=True)
 
 		return {"FINISHED"}
 
 	def invoke(self, context, event):
 		return self.execute(context)
+
 
 class SplitObjectWithPlane(bpy.types.Operator):
 	"""Splits object with plane"""
@@ -263,14 +268,12 @@ class SplitObjectWithPlane(bpy.types.Operator):
 		return split_plane_present and object_to_split_present and viable_split
 
 	def execute(self, context):
-		report = Split().split_with_plane(context)
-
-		self.report = report
-
+		Split(context)
 		return {"FINISHED"}
 
 	def invoke(self, context, event):
 		return self.execute(context)
+
 
 class automatedSplitting(bpy.types.Operator):
 	"""Splits object with plane"""
@@ -287,11 +290,8 @@ class automatedSplitting(bpy.types.Operator):
 		return start and obj_present
 
 	def execute(self, context):
-		Split().add_auto_planes(context)
-
+		AutoSplit(context)
 		return {"FINISHED"}
 
 	def invoke(self, context, event):
 		return self.execute(context)
-
-

@@ -1,60 +1,27 @@
-import os
-import csv
-
 import bpy
-import bmesh
-import mathutils
 from mathutils import Vector
-import numpy as np
 
 from .settings_utils import getSettings
-from .implementData import ImplementData
-from .lego_utils import legoData
 
 
 class Split():
+	ops = bpy.ops
 
-	def add_plane(self, context, colour, size=50, location=bpy.context.scene.cursor_location, name="SplitPlane"):
-		ops = bpy.ops
-		ops.mesh.primitive_plane_add(radius=size, location=location)
-		split_plane = context.selected_objects[0]
-		split_plane.name = name
+	def __init__(self, context):
+		self.context = context
+		self.objects = bpy.data.objects
 
-		# Solidifies plane to ensure difference operation works
-		bpy.context.scene.objects.active = split_plane
-		solidify = split_plane.modifiers.new(type='SOLIDIFY', name='split_plane_solidify')
-		solidify.thickness = 0.05
-		solidify.use_even_offset = True
-		ops.object.modifier_apply(modifier='split_plane_solidify')
-
-		split_plane.lock_scale = [False, False, True]  # locks scaling in z (thickness) axis
-
-		if colour:
-			colours = bpy.types.Scene.colours  # loads colours from separate class
-			colour = bpy.data.materials.new(name="default_colour")
-			split_plane.data.materials.append(colour)
-			split_plane.data.materials[0].diffuse_color = colours.default_colour
-
-		split_plane.select = True
-		bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
-
-	def split_with_plane(self, context):
-		objects = bpy.data.objects
 		object_to_split_name = bpy.types.Scene.surface_check.nearest_object_name
 		# print(object_to_split_name)
-		object_to_split = objects[object_to_split_name]
-		surface = objects["SplitPlane"]
+		object_to_split = self.objects[object_to_split_name]
+		surface = self.objects["SplitPlane"]
 
 		self.BooleanDifference(surface, object_to_split, displace=getSettings().displace_split)
 		report = self.PostSplitCleanUp(surface, object_to_split)
-		return report
 
 	def BooleanDifference(self, plane, object_to_split, displace):
-		ops = bpy.ops
-		context = bpy.context
-		objects = bpy.data.objects
 
-		context.scene.objects.active = object_to_split
+		self.context.scene.objects.active = object_to_split
 		name = object_to_split.name
 		name = name.split('.')[0]
 
@@ -63,21 +30,21 @@ class Split():
 		object_split_mod = object_to_split.modifiers.new(type="BOOLEAN", name="object_split")
 		object_split_mod.object = plane
 		object_split_mod.operation = 'DIFFERENCE'
-		ops.object.modifier_apply(modifier="object_split")
+		self.ops.object.modifier_apply(modifier="object_split")
 
 		# Separate by loose parts
-		ops.object.mode_set(mode='EDIT')
-		ops.mesh.select_all(action='SELECT')
-		ops.mesh.separate(type='LOOSE')
-		ops.object.mode_set(mode='OBJECT')
+		self.ops.object.mode_set(mode='EDIT')
+		self.ops.mesh.select_all(action='SELECT')
+		self.ops.mesh.separate(type='LOOSE')
+		self.ops.object.mode_set(mode='OBJECT')
 
 		plane_origin = plane.matrix_world.to_translation()
 		plane_rotation = plane.rotation_euler
 
-		for obj in objects:
+		for obj in self.objects:
 			if obj.name != "SplitPlane" and obj.name.startswith(name):
 				obj.select = True
-				ops.object.origin_set(type='ORIGIN_GEOMETRY')
+				self.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 
 				origin = obj.matrix_world.to_translation()
 				origin_in_plane_space = plane.matrix_world.inverted() * origin
@@ -95,19 +62,18 @@ class Split():
 					obj.location = obj.location + displacement_vector
 
 				# applies location transformation to data mesh
-				ops.object.transform_apply(location=True)
-				ops.object.origin_set(type='ORIGIN_GEOMETRY')
+				self.ops.object.transform_apply(location=True)
+				self.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 				obj.select = False
 
 	def PostSplitCleanUp(self, plane, object_to_split):
 		"""Removes small parts of mesh and clears object materials"""
-		objects = bpy.data.objects
 		name = object_to_split.name
 		name = name.split('.')[0]
 
 		removed = 0
 
-		for obj in objects:
+		for obj in self.objects:
 			if obj.name.startswith(name):
 				object_removed = False
 
@@ -116,7 +82,7 @@ class Split():
 					if dim < 1:
 						object_removed = True
 						print(obj.name + ' REMOVED')
-						objects.remove(obj, True)
+						self.objects.remove(obj, True)
 						removed += 1
 						break
 
@@ -128,186 +94,3 @@ class Split():
 		else:
 			report = ({'INFO'}, "Finished Clean up")
 		return report
-
-	def add_auto_planes(self, context):
-		obj = bpy.data.objects[ImplementData.object_name]
-		x, y = obj.dimensions[0], obj.dimensions[1]
-		if x > y:
-			size = x
-		else:
-			size = y
-
-		start_point = ImplementData.start_point
-		array = ImplementData.array
-		count = ImplementData.brick_count
-
-		zpositions = self.find_plane_positions(start_point, array, count)
-
-		for z in zpositions:
-			self.add_plane(context, colour=False, size=size, location=z, name='SplitPlane')
-
-		#Join all planes together into one object
-		self.boolean_planes()
-
-	def find_plane_positions(self, start_point, array, count):
-		"""Returns a list of zpositions"""
-		zpositions = []
-		possible_positions = []
-		critical_positions = []
-		w, d, h = legoData.getDims()
-
-		midpoint = [int((i - 1) / 2) for i in array.shape]
-		midpointZ = midpoint[0]
-
-		plane_offset = Vector((0, 0, 1.0))
-		# print(start_point)  # x,y,z
-
-		# print("array size: {}".format(array.shape))
-		# print(midpoint)  # z,y,x
-
-		for id in range(1, count + 1):
-			# print('index: ' + str(id))
-			indices = np.argwhere(array == id)
-			# returns [z,y,x]
-			# print(indices)
-			bottomleft = np.min(indices, axis=0)
-			bottom = bottomleft[0]
-			topright = np.max(indices, axis=0)
-			top = topright[0]
-
-			yrange = np.arange(bottomleft[1], topright[1] + 1)
-			xrange = np.arange(bottomleft[2], topright[2] + 1)
-
-			new_indices = np.empty([yrange.size * xrange.size, 2])
-			i = 0
-			for y in yrange:
-				for x in xrange:
-					# test_ind = [y,x]
-					new_indices[i][0] = y
-					new_indices[i][1] = x
-					i += 1
-			# print(new_indices)
-
-			covered_count = 0
-			for ind in new_indices:
-				# print(ind)
-				y = int(ind[0])
-				x = int(ind[1])
-
-				above = array[top + 1][y][x]
-				below = array[bottom - 1][y][x]
-				# print("above: {}, below: {}".format(above, below))
-				if below <= 0 or above <= 0:
-					covered_count += 1
-
-			if covered_count > 0:
-				z_index = int((top - bottom) / 2 + bottom)
-				zpositions.append(z_index)
-				if top == bottom:
-					critical_positions.append(z_index)
-				else:
-					brick_positions = [bottom, z_index, top]
-					possible_positions.append(brick_positions)
-		# TODO find brick possible planes, e.g. find over lap [1,2,3], [3,4,5], only need a cut a 3
-
-		possible_positions = [list(x) for x in set(tuple(x) for x in possible_positions)]
-
-		zpositions = list(set(zpositions))
-
-		overlap = {}
-		for pos in zpositions:
-			o_count = 0
-			for brick in possible_positions:
-				if pos in brick:
-					o_count += 1
-			if o_count in overlap:
-				overlap[o_count].append(pos)
-			else:
-				overlap[o_count] = [pos]
-
-		print("brick positions:")
-		print(possible_positions)
-
-		print("cricital positions:")
-		print(critical_positions)
-
-		print('overlap')
-		print(overlap)
-
-		new_z = []
-		keys = list(overlap.keys())
-		keys.sort(reverse=True)
-		for key in keys:
-			overlap[key].sort()
-			for pos in overlap[key]:
-				remove_count = 0
-				brick_to_remove = []
-				for brick in possible_positions:
-
-					if pos in brick:
-						brick_to_remove.append(brick)
-						remove_count += 1
-				if remove_count == key:
-					for brick in brick_to_remove:
-						possible_positions.remove(brick)
-					new_z.append(pos)
-		# TODO add compulsory planes
-		print(new_z)
-		z_world = [Vector((0, 0, (z - midpointZ) * h)) + start_point + plane_offset for z in new_z]
-		print(z_world)
-
-		return z_world
-
-	def boolean_planes(self):
-		objs = bpy.data.objects
-		for obj in objs:
-			obj.select = False
-			if obj.name.startswith('SplitPlane'):
-				obj.select = True
-
-		bpy.ops.object.make_single_user(object=True, obdata=True)
-		bpy.ops.object.convert(target='MESH')
-
-		obj = bpy.context.active_object
-		obj.select = False
-		obs = bpy.context.selected_objects
-
-		self.mesh_selection(obj, 'DESELECT')
-		for ob in obs:
-			self.mesh_selection(ob, 'SELECT')
-			self.boolean_mod(obj, ob, 'UNION')
-		obj.select = True
-		obj.modifiers.new(type='TRIANGULATE', name="triang")
-		bpy.ops.object.modifier_apply(apply_as='DATA', modifier="triang")
-
-
-	def mesh_selection(self, ob, select_action):
-		scene = bpy.context.scene
-		obj = bpy.context.active_object
-
-		scene.objects.active = ob
-		bpy.ops.object.mode_set(mode='EDIT')
-
-		bpy.ops.mesh.reveal()
-		bpy.ops.mesh.select_all(action=select_action)
-
-		bpy.ops.object.mode_set(mode='OBJECT')
-		scene.objects.active = obj
-
-	def boolean_mod(self, obj, ob, mode, ob_delete=True):
-		md = obj.modifiers.new("Auto Boolean", 'BOOLEAN')
-		md.show_viewport = False
-		md.operation = mode
-		md.solver = "BMESH"
-		md.object = ob
-
-		bpy.ops.object.modifier_apply(modifier="Auto Boolean")
-		if not ob_delete:
-			return
-		bpy.context.scene.objects.unlink(ob)
-		bpy.data.objects.remove(ob)
-
-	def plane_bool_difference(self, object, planes):
-		#TODO make the boolean difference between planes and object
-		scene = bpy.context.scene
-		scene.objects.active = object

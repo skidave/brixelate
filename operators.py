@@ -4,8 +4,9 @@ import bpy
 
 from .settings_utils import getSettings
 from .lego_utils import legoData
-from .brixelate_funcs import brixelateFunctions, experimentation, ratio
 from .simple_brixelate import SimpleBrixelate
+from .experimentation_brixelate import ExperimentBrixelate
+from .ratio_brixelate import RatioBrixelate
 from .implementation import ImplementFuncs
 from .split import Split
 from .auto_split import AutoSplit
@@ -31,8 +32,6 @@ class simpleBrixelate(bpy.types.Operator):
 
 	def execute(self, context):
 		target_object = context.selected_objects[0]
-
-		#brixelateFunctions().brixelate(context.scene, object_selected)
 		SimpleBrixelate(context, target_object)
 		self.report({"INFO"}, "Brixelate finished")
 
@@ -63,16 +62,8 @@ class experimentationBrixelate(bpy.types.Operator):
 					return True
 
 	def execute(self, context):
-		start = time.time()
-
-		number_objects, number_scales = experimentation(context)
-
-		end = time.time()
-		timer = end - start
-
-		self.report({"INFO"},
-					"Simulation run on {:d} objects {:d} times in {:f} seconds\n".format(number_objects, number_scales,
-																						 timer))
+		self.report({"INFO"}, "Experimentation finished")
+		ExperimentBrixelate(context)
 		return {'FINISHED'}
 
 	def invoke(self, context, event):
@@ -97,18 +88,9 @@ class ratioBrixelate(bpy.types.Operator):
 				return True
 
 	def execute(self, context):
-		start = time.time()
+		RatioBrixelate(context, method='vol')
 
-		number_objects, number_ratios, number_points = ratio(context, method='vol')
-
-		end = time.time()
-		timer = end - start
-
-		self.report({"INFO"},
-					"\nRatios Experiment run on {:d} objects in {:d} positions over {:d} ratios in {:f} seconds\n".format(
-						number_objects, number_points,
-						number_ratios,
-						timer))
+		self.report({"INFO"}, "Ratio Experimentation finished")
 
 		return {'FINISHED'}
 

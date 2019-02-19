@@ -1,5 +1,4 @@
 import time
-import datetime
 import copy
 import math
 import re
@@ -10,16 +9,13 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 
-from .mesh_utils import getVertices, getEdges, rayInside, get_angles, homeObject
+from .mesh_utils import getVertices, getEdges, rayInside, homeObject
 from .lego_utils import legoData
 from .settings_utils import getSettings
-from .file_utils import csv_header, csv_write
 from .implementData import ImplementData
 
 
-
 class SimpleBrixelate(object):
-
 	ops = bpy.ops
 
 	def __init__(self, context, target_object):
@@ -27,7 +23,7 @@ class SimpleBrixelate(object):
 		self.scene = self.context.scene
 		self.target_object = target_object
 
-		self.brixelate()
+		self.brixelate(self.target_object)
 
 	def brixelate(self, target_object, **kwargs):
 

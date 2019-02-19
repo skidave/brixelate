@@ -210,3 +210,4 @@ class AutoSplit(object):
 		self.ops.mesh.select_all(action='SELECT')
 		self.ops.mesh.separate(type='LOOSE')
 		self.ops.object.mode_set(mode='OBJECT')
+		planes.hide = True

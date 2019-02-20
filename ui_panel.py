@@ -89,7 +89,7 @@ class BrixelPanel(bpy.types.Panel):
 		row = box.row()
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
 		row = box.row()
-		row.operator("tool.merge_test", text="Create Shell", icon="UGLYPACKAGE")
+		row.operator("tool.implementation", text="Create Shell", icon="UGLYPACKAGE")
 
 		# layout.separator()
 		# layout.operator("tool.merge_test", text="Create Shell", icon="UV_FACESEL")

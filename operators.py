@@ -7,7 +7,7 @@ from .lego_utils import legoData
 from .simple_brixelate import SimpleBrixelate
 from .experimentation_brixelate import ExperimentBrixelate
 from .ratio_brixelate import RatioBrixelate
-from .implementation import ImplementFuncs
+from .implementation import BrixelateImplementation
 from .split import Split
 from .auto_split import AutoSplit
 from .implementData import ImplementData
@@ -181,9 +181,9 @@ class spinTest(bpy.types.Operator):
 		return self.execute(context)
 
 
-class MergeTest(bpy.types.Operator):
+class Implementation(bpy.types.Operator):
 	'''Merges Bricks'''
-	bl_idname = "tool.merge_test"
+	bl_idname = "tool.implementation"
 	bl_label = "Brixelate Brick Merge"
 	bl_options = {"UNDO"}
 
@@ -200,7 +200,7 @@ class MergeTest(bpy.types.Operator):
 
 	def execute(self, context):
 
-		ImplementFuncs().bricks_boolean(context.scene)
+		BrixelateImplementation(context)
 
 		string = "Brick "
 		for ob in context.scene.objects:

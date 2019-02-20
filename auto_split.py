@@ -2,7 +2,7 @@ import bpy
 from mathutils import Vector
 import numpy as np
 
-from .mesh_utils import add_plane
+from .mesh_utils import add_plane, AutoBoolean
 from .implementData import ImplementData
 from .lego_utils import legoData
 
@@ -33,7 +33,13 @@ class AutoSplit(object):
 			add_plane(context, colour=False, size=size, location=p, name='SplitPlane')
 
 		# Join all planes together into one object
-		planes = self.boolean_planes()
+		objs = bpy.data.objects
+		for obj in objs:
+			obj.select = False
+			if obj.name.startswith('SplitPlane'):
+				obj.select = True
+
+		planes = AutoBoolean('UNION').join_selected_meshes()
 
 		# split target object with planes
 		self.plane_bool_difference(self.target_object, planes)
@@ -146,55 +152,6 @@ class AutoSplit(object):
 		print(z_world)
 
 		return z_world
-
-	def boolean_planes(self):
-		objs = bpy.data.objects
-		for obj in objs:
-			obj.select = False
-			if obj.name.startswith('SplitPlane'):
-				obj.select = True
-
-		self.ops.object.make_single_user(object=True, obdata=True)
-		self.ops.object.convert(target='MESH')
-
-		obj = self.context.active_object
-		obj.select = False
-		obs = self.context.selected_objects
-
-		self.mesh_selection(obj, 'DESELECT')
-		for ob in obs:
-			self.mesh_selection(ob, 'SELECT')
-			self.boolean_mod(obj, ob, 'UNION')
-		obj.select = True
-		obj.modifiers.new(type='TRIANGULATE', name="triang")
-		self.ops.object.modifier_apply(apply_as='DATA', modifier="triang")
-
-		return obj
-
-	def mesh_selection(self, ob, select_action):
-		obj = self.context.active_object
-
-		self.scene.objects.active = ob
-		self.ops.object.mode_set(mode='EDIT')
-
-		self.ops.mesh.reveal()
-		self.ops.mesh.select_all(action=select_action)
-
-		self.ops.object.mode_set(mode='OBJECT')
-		self.scene.objects.active = obj
-
-	def boolean_mod(self, obj, ob, mode, ob_delete=True):
-		md = obj.modifiers.new("Auto Boolean", 'BOOLEAN')
-		md.show_viewport = False
-		md.operation = mode
-		md.solver = "BMESH"
-		md.object = ob
-
-		self.ops.object.modifier_apply(modifier="Auto Boolean")
-		if not ob_delete:
-			return
-		self.scene.objects.unlink(ob)
-		bpy.data.objects.remove(ob)
 
 	def plane_bool_difference(self, object, planes):
 

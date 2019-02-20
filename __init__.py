@@ -18,7 +18,7 @@ from .operators import (resetBrixelate,
 						experimentationBrixelate,
 						ratioBrixelate,
 						spinTest,
-						MergeTest,
+						Implementation,
 						AddSplitPlane,
 						SplitObjectWithPlane,
 						automatedSplitting
@@ -36,7 +36,7 @@ classes = (
 	resetBrixelate,
 
 	spinTest,
-	MergeTest,
+	Implementation,
 
 	AddSplitPlane,
 	SplitObjectWithPlane,

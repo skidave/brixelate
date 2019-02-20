@@ -190,3 +190,55 @@ def bmesh_copy_from_object(obj, transform=True, triangulate=True, apply_modifier
 		bmesh.ops.triangulate(bm, faces=bm.faces)
 
 	return bm
+
+class AutoBoolean(object):
+
+
+	def __init__(self, mode='UNION', solver='CARVE'):
+		self.mode = mode
+		self.solver = solver
+
+	def join_selected_meshes(self):
+
+		bpy.ops.object.make_single_user(object=True, obdata=True)
+		bpy.ops.object.convert(target='MESH')
+
+		obj = bpy.context.active_object
+		obj.select = False
+		obs = bpy.context.selected_objects
+
+		self.mesh_selection(obj, 'DESELECT')
+		for ob in obs:
+			self.mesh_selection(ob, 'SELECT')
+			self.boolean_mod(obj, ob, self.mode)
+		obj.select = True
+		obj.modifiers.new(type='TRIANGULATE', name="triang")
+		bpy.ops.object.modifier_apply(apply_as='DATA', modifier="triang")
+
+		return obj
+
+	def mesh_selection(self, ob, select_action):
+		obj = bpy.context.active_object
+
+		bpy.context.scene.objects.active = ob
+		bpy.ops.object.mode_set(mode='EDIT')
+
+		bpy.ops.mesh.reveal()
+		bpy.ops.mesh.select_all(action=select_action)
+
+		bpy.ops.object.mode_set(mode='OBJECT')
+		bpy.context.scene.objects.active = obj
+
+	def boolean_mod(self, obj, ob, mode, ob_delete=True):
+		md = obj.modifiers.new("Auto Boolean", 'BOOLEAN')
+		md.show_viewport = False
+		md.operation = mode
+		md.solver = self.solver
+		md.object = ob
+
+		bpy.ops.object.modifier_apply(modifier="Auto Boolean")
+		if not ob_delete:
+			return
+		bpy.context.scene.objects.unlink(ob)
+		bpy.data.objects.remove(ob)
+

@@ -99,11 +99,11 @@ class SimpleBrixelate(object):
 
 		ImplementData.object_name = target_object.name
 
+		add_bricks = True
 		if 'output' in kwargs:
 			if kwargs['output']:
 				add_bricks = False
-		else:
-			add_bricks = True
+
 
 		if 'ratio' in kwargs:
 			ratio = kwargs['ratio']

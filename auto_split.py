@@ -43,6 +43,12 @@ class AutoSplit(object):
 
 		# split target object with planes
 		self.plane_bool_difference(self.target_object, planes)
+		self.ops.object.select_all(action='DESELECT')
+		for ob in self.scene.objects:
+			if ob.name.startswith(self.target_object.name):
+				ob.select = True
+
+
 
 	def find_plane_positions(self, start_point, array, count):
 		"""Returns a list of zpositions"""

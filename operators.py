@@ -116,7 +116,7 @@ class resetBrixelate(bpy.types.Operator):
 		objs = bpy.data.objects
 		for ob in scene.objects:
 			ob.hide = False
-			if ob.name.startswith('Brick '):
+			if ob.name.startswith('Brick ') or ob.name.startswith('SplitPlane'):
 				objs.remove(ob, True)
 
 		getSettings().show_hide_model = True
@@ -202,10 +202,10 @@ class Implementation(bpy.types.Operator):
 
 		BrixelateImplementation(context)
 
-		string = "Brick "
-		for ob in context.scene.objects:
-			if ob.name.startswith(string):
-				ob.hide = True
+		# string = "Brick "
+		# for ob in context.scene.objects:
+		# 	if ob.name.startswith(string):
+		# 		ob.hide = True
 
 		return {'FINISHED'}
 

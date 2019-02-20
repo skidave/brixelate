@@ -1,16 +1,21 @@
 import bpy
 import bmesh
-from mathutils import Vector, Quaternion
+from mathutils import Vector
 import numpy as np
 
 
 def homeObject(obj):
 	obj.select = True
 	bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-	bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
-	obj.location = [0, 0, obj.dimensions[2] / 2]
-	obj.lock_location = [True, True, True]
-	bpy.context.scene.my_settings.lock_objects = False
+	bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_VOLUME')
+
+	vertices = [obj.matrix_world * Vector(corner) for corner in obj.bound_box]
+	z_height = vertices[0][2]
+	obj.location = [0, 0, obj.location[2] - z_height]
+
+
+	# obj.lock_location = [True, True, True]
+	# bpy.context.scene.my_settings.lock_objects = False
 
 
 def getVertices(pos, w, d, h):
@@ -159,6 +164,7 @@ def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_locati
 	split_plane.select = True
 	bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
 
+
 def bmesh_copy_from_object(obj, transform=True, triangulate=True, apply_modifiers=False):
 	"""
 	Returns a transformed, triangulated copy of the mesh
@@ -191,17 +197,17 @@ def bmesh_copy_from_object(obj, transform=True, triangulate=True, apply_modifier
 
 	return bm
 
+
 class AutoBoolean(object):
 
-
-	def __init__(self, mode='UNION', solver='CARVE'):
+	def __init__(self, mode='UNION', solver='BMESH'):
 		self.mode = mode
 		self.solver = solver
 
 	def join_selected_meshes(self):
 
 		bpy.ops.object.make_single_user(object=True, obdata=True)
-		bpy.ops.object.convert(target='MESH')
+		# bpy.ops.object.convert(target='MESH')
 
 		obj = bpy.context.active_object
 		obj.select = False
@@ -212,8 +218,8 @@ class AutoBoolean(object):
 			self.mesh_selection(ob, 'SELECT')
 			self.boolean_mod(obj, ob, self.mode)
 		obj.select = True
-		obj.modifiers.new(type='TRIANGULATE', name="triang")
-		bpy.ops.object.modifier_apply(apply_as='DATA', modifier="triang")
+
+		convert_to_tris(obj)
 
 		return obj
 
@@ -241,4 +247,26 @@ class AutoBoolean(object):
 			return
 		bpy.context.scene.objects.unlink(ob)
 		bpy.data.objects.remove(ob)
+
+
+def convert_to_tris(obj):
+	bpy.context.scene.objects.active = obj
+	bpy.ops.object.mode_set(mode='EDIT')
+	bpy.ops.mesh.select_all(action='SELECT')
+	bpy.ops.mesh.quads_convert_to_tris(quad_method='BEAUTY', ngon_method='BEAUTY')
+
+	bpy.ops.object.mode_set(mode='OBJECT')
+
+def remesh(obj):
+	bpy.context.scene.objects.active = obj
+	md=obj.modifiers.new("remesh", 'REMESH')
+	md.octree_depth=2
+	bpy.ops.object.modifier_apply(modifier="remesh")
+
+def displace(obj):
+	bpy.context.scene.objects.active = obj
+	md = obj.modifiers.new("displace", 'DISPLACE')
+	md.mid_level=0.95
+	bpy.ops.object.modifier_apply(modifier="displace")
+
 

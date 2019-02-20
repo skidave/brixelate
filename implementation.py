@@ -7,12 +7,11 @@ from mathutils import Vector
 
 from .lego_utils import legoData
 from .implementData import ImplementData
-from .mesh_utils import AutoBoolean
+from .mesh_utils import AutoBoolean, convert_to_tris, remesh, displace
 
 
 class BrixelateImplementation(object):
 	ops = bpy.ops
-	w, d, h = legoData().getDims()
 
 	stud_height = 1.8
 	stud_diameter = 4.9 / 2
@@ -22,13 +21,15 @@ class BrixelateImplementation(object):
 		self.context = context
 		self.scene = self.context.scene
 
+		self.w, self.d, self.h = legoData().getDims()
+
 		self.hole_verts()  # load geometry from CSV
 
 		self.bricks_boolean()
 
 	def bricks_boolean(self):
 
-		mesh = bpy.ops.mesh
+		mesh = self.ops.mesh
 
 		array = ImplementData.array
 		start_point = ImplementData.start_point
@@ -38,90 +39,41 @@ class BrixelateImplementation(object):
 
 		self.add_temp_bricks(array, start_point, name)
 
-		brick_name = "temp " + name
-		self.scene.objects.active = self.scene.objects[brick_name]
-
 		for ob in self.scene.objects:
 			ob.select = False
-			if ob.name.startswith(brick_name) or ob.name.startswith('HOLE'):
-				ob.select = True
-		AutoBoolean('UNION').join_selected_meshes()
-
-		self.scene.objects.active = self.scene.objects[brick_name]
-		for ob in self.scene.objects:
-			ob.select = False
-			if ob.name.startswith('STUD'):
+			if ob.name.startswith('Brick'):
+				remesh(ob)
+				displace(ob)
+				convert_to_tris(ob)
+				ob.select=True
+			if ob.name.startswith('HOLE'):
+				convert_to_tris(ob)
 				ob.select = True
 
 
-	# # join individual brick meshes together
-	# self.ops.object.join()
-	# self.ops.object.mode_set(mode='EDIT')
+		joined_bricks = AutoBoolean('UNION').join_selected_meshes()
+
 	#
-	# # remove doubles
-	# mesh.remove_doubles(threshold=0.0001)
-	#
-	# # select interior faces
-	# mesh.select_all(action='DESELECT')
-	# mesh.select_interior_faces()
-	# mesh.delete(type='FACE')
-	#
-	# # fix holes
-	# mesh.select_non_manifold()
-	# mesh.edge_face_add()
-	#
-	# # cleanup
-	# mesh.select_all(action="SELECT")
-	# mesh.dissolve_limited()
-	#
-	# # print("Object Mode")
-	# self.ops.object.mode_set(mode='OBJECT')
-	#
-	# cylinder_types = ['STUD', 'HOLE']
-	#
-	# for cylinder in cylinder_types:
-	# 	self.scene.objects.active = self.scene.objects[cylinder]
-	# 	for ob in self.scene.objects:
-	# 		ob.select = False
-	# 		if ob.name.startswith(cylinder):
-	# 			ob.select = True
-	#
-	# 	# join individual brick meshes together
-	# 	self.ops.object.join()
-	#
-	# stud = self.scene.objects['STUD']
-	# hole = self.scene.objects['HOLE']
-	#
-	# stud_bool = joined_bricks.modifiers.new(type="BOOLEAN", name="stud bool")
-	# stud_bool.object = stud
-	# stud_bool.operation = 'DIFFERENCE'
-	# # stud.hide = True
-	#
-	# hole_bool = joined_bricks.modifiers.new(type="BOOLEAN", name="hole bool")
-	# hole_bool.object = hole
-	# hole_bool.operation = 'UNION'
-	# # hole.hide = True
+	# for ob in self.scene.objects:
+	# 	ob.select = False
+	# 	if ob.name.startswith('STUD'):
+	# 		convert_to_tris(ob)
+	# 		ob.select = True
 	#
 	# self.scene.objects.active = joined_bricks
-	# bpy.ops.object.modifier_apply(apply_as='DATA', modifier="stud bool")
-	# bpy.ops.object.modifier_apply(apply_as='DATA', modifier="hole bool")
-	#
-	# # triangulate to ensure better boolean operations
-	# triangulate = joined_bricks.modifiers.new(type='TRIANGULATE', name="triang")
-	# bpy.ops.object.modifier_apply(apply_as='DATA', modifier="triang")
-	#
-	# bpy.data.objects.remove(stud, True)
-	# bpy.data.objects.remove(hole, True)
+	# joined_bricks = AutoBoolean('DIFFERENCE').join_selected_meshes()
 	#
 	# self.scene.objects.active = main_obj
-	# lego_bool = main_obj.modifiers.new(type="BOOLEAN", name="lego bool")
-	# lego_bool.object = joined_bricks
-	# lego_bool.operation = 'DIFFERENCE'
-	# # joined_bricks.hide = True
+	# for ob in self.scene.objects:
+	# 	ob.select = False
+	# 	#if ob.name.startswith(brick_name):
+	# 	if ob.name.startswith('Brick'):
+	# 		ob.select = True
+	# assert len(self.context.selected_objects) == 1
+	# AutoBoolean('DIFFERENCE').join_selected_meshes()
 	#
-	# bpy.ops.object.modifier_apply(apply_as='DATA', modifier="lego bool")
-	#
-	# bpy.data.objects.remove(joined_bricks, True)
+	# self.ops.object.select_all(action='DESELECT')
+	# main_obj.select = True
 
 	def add_temp_bricks(self, array, start_point, name):
 		z_array, y_array, x_array = array.shape[0], array.shape[1], array.shape[2]
@@ -136,7 +88,7 @@ class BrixelateImplementation(object):
 				for x in range(x_array):
 					point = Vector(((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
 					if array[z, y, x] > 0:
-						legoData().simple_add_brick_at_point(point, name)
+						# legoData().simple_add_brick_at_point(point, name)
 						if array[z + 1, y, x] <= 0:
 							self.add_hole(point)
 						if array[z - 1, y, x] <= 0:

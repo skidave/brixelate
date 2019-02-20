@@ -50,18 +50,21 @@ class legoData():
 
 		types = [getSettings().use_nano, getSettings().use_lego, getSettings().use_duplo]
 
+		base_w = 8.
+		base_d = 8.
+		base_h = 3.2
 		if types[0]:
-			w = 8.00 / 2
-			d = 8.00 / 2
-			h = 3.20
+			w = base_w / 2
+			d = base_d / 2
+			h = base_h
 		elif types[1]:
-			w = 8.00
-			d = 8.00
-			h = 3.20
+			w = base_w
+			d = base_d
+			h = base_h
 		else:
-			w = 8.00 * 4
-			d = 8.00 * 4
-			h = 3.20 * 6
+			w = base_w * 4
+			d = base_d * 4
+			h = base_h * 6
 
 		return w, d, h
 
@@ -69,16 +72,17 @@ class legoData():
 	def addNewBrickAtPoint(self, point, width, depth, height, number, name):
 		w, d, h = self.getDims()
 
+		offset = 0.000000000000000
 		Vertices = \
 			[
 				Vector((0, 0, 0)),
-				Vector((0, d * depth, 0)),
-				Vector((w * width, d * depth, 0)),
-				Vector((w * width, 0, 0)),
-				Vector((0, 0, h * height)),
-				Vector((0, d * depth, h * height)),
-				Vector((w * width, d * depth, h * height)),
-				Vector((w * width, 0, h * height)),
+				Vector((0, d * depth+offset, 0)),
+				Vector((w * width+offset, d * depth+offset, 0)),
+				Vector((w * width+offset, 0, 0)),
+				Vector((0, 0, h * height+offset)),
+				Vector((0, d * depth+offset, h * height+offset)),
+				Vector((w * width+offset, d * depth+offset, h * height+offset)),
+				Vector((w * width+offset, 0, h * height+offset)),
 			]
 
 		Faces = \

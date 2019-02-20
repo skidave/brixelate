@@ -1,7 +1,9 @@
 import bpy
 
+
 def getSettings():
 	return bpy.context.scene.my_settings
+
 
 def showHideModel(self, context):
 	scene = bpy.context.scene
@@ -47,7 +49,7 @@ def allBricks(self, context):
 
 
 def lockObjects(self, context):
-	scene = bpy.context.scene
+	scene = context.scene
 
 	val = not scene.my_settings.lock_objects
 	for ob in scene.objects:

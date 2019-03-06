@@ -72,17 +72,18 @@ class legoData():
 	def addNewBrickAtPoint(self, point, width, depth, height, number, name):
 		w, d, h = self.getDims()
 
-		offset = 0.000000000000000
+		offset = 0.00
+		#offset = random.uniform(0.05, 0.2)
 		Vertices = \
 			[
-				Vector((0, 0, 0)),
-				Vector((0, d * depth+offset, 0)),
-				Vector((w * width+offset, d * depth+offset, 0)),
-				Vector((w * width+offset, 0, 0)),
-				Vector((0, 0, h * height+offset)),
-				Vector((0, d * depth+offset, h * height+offset)),
+				Vector((0.0, 0.0, 0.0)),
+				Vector((0.0, d * depth+offset, 0.0)),
+				Vector((w * width+offset, d * depth+offset, 0.0)),
+				Vector((w * width+offset, 0.0, 0.0)),
+				Vector((0.0, 0.0, h * height+offset)),
+				Vector((0.0, d * depth+offset, h * height+offset)),
 				Vector((w * width+offset, d * depth+offset, h * height+offset)),
-				Vector((w * width+offset, 0, h * height+offset)),
+				Vector((w * width+offset, 0.0, h * height+offset)),
 			]
 
 		Faces = \

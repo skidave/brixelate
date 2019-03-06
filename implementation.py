@@ -7,7 +7,7 @@ from mathutils import Vector
 
 from .lego_utils import legoData
 from .implementData import ImplementData
-from .mesh_utils import AutoBoolean, convert_to_tris, remesh, displace
+from .mesh_utils import AutoBoolean, convert_to_tris
 
 
 class BrixelateImplementation(object):
@@ -37,43 +37,59 @@ class BrixelateImplementation(object):
 		name = ImplementData.object_name
 		main_obj = self.scene.objects[name]
 
+		brick_name = 'Brick 1'
+
 		self.add_temp_bricks(array, start_point, name)
 
+		self.scene.objects.active = self.scene.objects[brick_name]
 		for ob in self.scene.objects:
 			ob.select = False
 			if ob.name.startswith('Brick'):
-				remesh(ob)
-				displace(ob)
-				convert_to_tris(ob)
-				ob.select=True
-			if ob.name.startswith('HOLE'):
+				ob.select = True
+
+		bpy.ops.object.join()
+		bpy.ops.object.mode_set(mode='EDIT')
+		# remove doubles
+		mesh.remove_doubles(threshold=0.0001)
+		# select interior faces
+		mesh.select_all(action='DESELECT')
+		mesh.select_interior_faces()
+		mesh.delete(type='FACE')
+		# fix holes
+		mesh.select_non_manifold()
+		mesh.edge_face_add()
+		# cleanup
+		mesh.select_all(action="SELECT")
+		mesh.dissolve_limited()
+		# print("Object Mode")
+		bpy.ops.object.mode_set(mode='OBJECT')
+
+		for ob in self.scene.objects:
+			ob.select = False
+			if ob.name.startswith('HOLE') or ob.name == brick_name:
 				convert_to_tris(ob)
 				ob.select = True
 
-
 		joined_bricks = AutoBoolean('UNION').join_selected_meshes()
 
-	#
-	# for ob in self.scene.objects:
-	# 	ob.select = False
-	# 	if ob.name.startswith('STUD'):
-	# 		convert_to_tris(ob)
-	# 		ob.select = True
-	#
-	# self.scene.objects.active = joined_bricks
-	# joined_bricks = AutoBoolean('DIFFERENCE').join_selected_meshes()
-	#
-	# self.scene.objects.active = main_obj
-	# for ob in self.scene.objects:
-	# 	ob.select = False
-	# 	#if ob.name.startswith(brick_name):
-	# 	if ob.name.startswith('Brick'):
-	# 		ob.select = True
-	# assert len(self.context.selected_objects) == 1
-	# AutoBoolean('DIFFERENCE').join_selected_meshes()
-	#
-	# self.ops.object.select_all(action='DESELECT')
-	# main_obj.select = True
+		self.scene.objects.active = main_obj
+		for ob in self.scene.objects:
+			ob.select = False
+			if ob.name == brick_name:
+				ob.select = True
+		assert len(self.context.selected_objects) == 1
+		AutoBoolean('DIFFERENCE').join_selected_meshes()
+
+		for ob in self.scene.objects:
+			ob.select = False
+			if ob.name.startswith('STUD') or ob.name == name:
+				convert_to_tris(ob)
+				ob.select = True
+
+		brixelated = AutoBoolean('UNION').join_selected_meshes()
+
+		self.ops.object.select_all(action='DESELECT')
+		main_obj.select = True
 
 	def add_temp_bricks(self, array, start_point, name):
 		z_array, y_array, x_array = array.shape[0], array.shape[1], array.shape[2]

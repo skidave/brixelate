@@ -37,16 +37,16 @@ class BrixelateImplementation(object):
 		name = ImplementData.object_name
 		main_obj = self.scene.objects[name]
 
-		brick_name = 'Brick 1'
-
 		self.add_temp_bricks(array, start_point, name)
 
-		self.scene.objects.active = self.scene.objects[brick_name]
 		for ob in self.scene.objects:
 			ob.select = False
-			if ob.name.startswith('Brick'):
+			if ob.name.startswith('temp'):
 				ob.select = True
+			if ob.name.startswith('Brick '):
+				ob.hide=True
 
+		self.scene.objects.active = self.scene.objects['temp '+name]
 		bpy.ops.object.join()
 		bpy.ops.object.mode_set(mode='EDIT')
 		# remove doubles
@@ -66,7 +66,7 @@ class BrixelateImplementation(object):
 
 		for ob in self.scene.objects:
 			ob.select = False
-			if ob.name.startswith('HOLE') or ob.name == brick_name:
+			if ob.name.startswith('HOLE') or ob.name.startswith('temp'):
 				convert_to_tris(ob)
 				ob.select = True
 
@@ -75,7 +75,7 @@ class BrixelateImplementation(object):
 		self.scene.objects.active = main_obj
 		for ob in self.scene.objects:
 			ob.select = False
-			if ob.name == brick_name:
+			if ob.name.startswith('temp'):
 				ob.select = True
 		assert len(self.context.selected_objects) == 1
 		AutoBoolean('DIFFERENCE').join_selected_meshes()
@@ -104,7 +104,7 @@ class BrixelateImplementation(object):
 				for x in range(x_array):
 					point = Vector(((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
 					if array[z, y, x] > 0:
-						# legoData().simple_add_brick_at_point(point, name)
+						legoData().simple_add_brick_at_point(point, name)
 						if array[z + 1, y, x] <= 0:
 							self.add_hole(point)
 						if array[z - 1, y, x] <= 0:

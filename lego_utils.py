@@ -1,6 +1,7 @@
+import random
+
 import bpy
 from mathutils import Vector
-import random
 import numpy as np
 
 from .settings_utils import getSettings
@@ -73,17 +74,17 @@ class legoData():
 		w, d, h = self.getDims()
 
 		offset = 0.00
-		#offset = random.uniform(0.05, 0.2)
+		# offset = random.uniform(0.05, 0.2)
 		Vertices = \
 			[
 				Vector((0.0, 0.0, 0.0)),
-				Vector((0.0, d * depth+offset, 0.0)),
-				Vector((w * width+offset, d * depth+offset, 0.0)),
-				Vector((w * width+offset, 0.0, 0.0)),
-				Vector((0.0, 0.0, h * height+offset)),
-				Vector((0.0, d * depth+offset, h * height+offset)),
-				Vector((w * width+offset, d * depth+offset, h * height+offset)),
-				Vector((w * width+offset, 0.0, h * height+offset)),
+				Vector((0.0, d * depth + offset, 0.0)),
+				Vector((w * width + offset, d * depth + offset, 0.0)),
+				Vector((w * width + offset, 0.0, 0.0)),
+				Vector((0.0, 0.0, h * height + offset)),
+				Vector((0.0, d * depth + offset, h * height + offset)),
+				Vector((w * width + offset, d * depth + offset, h * height + offset)),
+				Vector((w * width + offset, 0.0, h * height + offset)),
 			]
 
 		Faces = \
@@ -113,20 +114,20 @@ class legoData():
 		new_brick.location = point
 
 	def simple_add_brick_at_point(self, point, name):
-		depth, width, height = 1,1,1
+		depth, width, height = 1., 1., 1.
 
 		w, d, h = self.getDims()
 
 		Vertices = \
 			[
-				Vector((0, 0, 0)),
-				Vector((0, d * depth, 0)),
-				Vector((w * width, d * depth, 0)),
-				Vector((w * width, 0, 0)),
-				Vector((0, 0, h * height)),
-				Vector((0, d * depth, h * height)),
+				Vector((0.0, 0.0, 0.0)),
+				Vector((0.0, d * depth, 0.0)),
+				Vector((w * width, d * depth, 0.0)),
+				Vector((w * width, 0.0, 0.0)),
+				Vector((0.0, 0.0, h * height)),
+				Vector((0.0, d * depth, h * height)),
 				Vector((w * width, d * depth, h * height)),
-				Vector((w * width, 0, h * height)),
+				Vector((w * width, 0.0, h * height)),
 			]
 
 		Faces = \

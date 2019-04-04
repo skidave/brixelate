@@ -1,15 +1,11 @@
 import bpy
-from bpy.props import (StringProperty,
-					   BoolProperty,
+from bpy.props import (BoolProperty,
 					   BoolVectorProperty,
 					   IntProperty,
 					   FloatProperty,
-					   FloatVectorProperty,
-					   EnumProperty,
-					   PointerProperty,
 					   )
 
-from .settings_utils import *
+from brixelate.utils.settings_utils import *
 
 
 class PanelSettings(bpy.types.PropertyGroup):

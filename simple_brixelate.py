@@ -2,6 +2,7 @@ import time
 import copy
 import math
 import re
+import collections
 from operator import itemgetter
 
 import bpy
@@ -9,9 +10,9 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 
-from .mesh_utils import getVertices, getEdges, rayInside, homeObject
-from .lego_utils import legoData
-from .settings_utils import getSettings
+from .utils.mesh_utils import getVertices, getEdges, rayInside, homeObject, obj_volume
+from .utils.lego_utils import legoData
+from .utils.settings_utils import getSettings
 from .implementData import ImplementData
 
 
@@ -126,11 +127,10 @@ class SimpleBrixelate(object):
 			# Filter usedbrick dictionary to only include those where the count is > 0
 			ImplementData.used_bricks = {brick: value for brick, value in used_bricks_dict.items() if
 										 value['count'] > 0}
-		# print(ImplementData.used_bricks)
-		bm = bmesh.new()
-		bm.from_mesh(target_object.data)
-		bmesh.ops.triangulate(bm, faces=bm.faces)
-		object_volume = bm.calc_volume()
+
+			self.brick_parsing(ImplementData.used_bricks)
+
+		object_volume = obj_volume(target_object)
 
 		volume_percent = (lego_volume / object_volume)
 
@@ -314,3 +314,20 @@ class SimpleBrixelate(object):
 		packing_time = (end_time - start_time)
 
 		return lego_volume, used_bricks_dict, brick_count, packed_brick_array
+
+	def brick_parsing(self, used_bricks_dict):
+
+		brick_dict = {}
+		for type in used_bricks_dict:
+			name = type[2:]
+			if type[0] == 'B':
+				full_type = 'Brick'
+			else:
+				full_type = 'Plate'
+			full_name = ' '.join([name, full_type])
+			count = used_bricks_dict[type]['count']
+			brick_dict[full_name] = count
+
+		sorted_bricks = sorted(brick_dict.items(), key=itemgetter(1), reverse=True)
+		ImplementData.sorted_bricks = sorted_bricks
+

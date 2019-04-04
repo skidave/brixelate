@@ -1,6 +1,7 @@
 import bpy
 
-from .settings_utils import getSettings
+from brixelate.utils.settings_utils import getSettings
+from ..implementData import ImplementData
 
 
 class BrixelPanel(bpy.types.Panel):
@@ -95,7 +96,7 @@ class BrixelPanel(bpy.types.Panel):
 		# layout.operator("tool.merge_test", text="Create Shell", icon="UV_FACESEL")
 
 		layout.separator()
-		topbox=layout.box()
+		topbox = layout.box()
 		topbox.label("Segmentation", icon="MESH_GRID")
 		box = topbox.box()
 		box.label('Automatic', icon="SCRIPTWIN")
@@ -107,10 +108,51 @@ class BrixelPanel(bpy.types.Panel):
 		row.operator("mesh.add_split_plane", text="Add Plane", icon="MESH_PLANE")
 		row = box.row()
 		row.prop(settings, "displace_split")
-		row.prop(settings, "lock_objects",text=("Lock Objects" if settings.lock_objects else "Unlock Objects"), toggle=True)
+		row.prop(settings, "lock_objects", text=("Lock Objects" if settings.lock_objects else "Unlock Objects"),
+				 toggle=True)
 		row = box.row()
-
 		row.operator("mesh.split_object", text="Split", icon="MOD_BOOLEAN")
+
+		layout.separator()
+		topbox = layout.box()
+		topbox.label('Fabrication')
+		row = topbox.row()
+		row.operator("mesh.print_estimate", text="Print Estimate", icon="MESH_PLANE")
+		topbox.separator()
+		toprow = topbox.row()
+
+		col = toprow.column()
+		col.label(text="LEGO", icon="GROUP_VERTEX")
+
+		col.separator()
+		innerbox = col.box()
+		row = innerbox.row()
+		if ImplementData.brick_count > 1:
+
+			if ImplementData.sorted_bricks is not None:
+				col = row.column()
+				for el in ImplementData.sorted_bricks:
+					string = "{0}:    {1}".format(el[0], el[1])
+					col.label(string)
+				col.label("Total:    {}".format(ImplementData.brick_count))
+		else:
+			col = row.column()
+			col.label('No Data')
+
+		col = toprow.column()
+		col.label(text="3D Print", icon="MESH_PLANE")
+		col.separator()
+		innerbox = col.box()
+		row = innerbox.row()
+		if ImplementData.print_estimates is not None:
+				col = row.column()
+				for el in ImplementData.print_estimates:
+					string = "{0}:    {1:.1f}".format(el[0], el[1])
+					col.label(string)
+				col.label("Total:    {:.1f}".format(ImplementData.total_print_time))
+		else:
+			col = row.column()
+			col.label('No Data')
 
 		if len(scene.objects) > 0:
 

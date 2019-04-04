@@ -5,9 +5,9 @@ import bpy
 import bmesh
 from mathutils import Vector
 
-from .lego_utils import legoData
+from brixelate.utils.lego_utils import legoData
 from .implementData import ImplementData
-from .mesh_utils import AutoBoolean, convert_to_tris
+from brixelate.utils.mesh_utils import AutoBoolean, convert_to_tris
 
 
 class BrixelateImplementation(object):
@@ -175,7 +175,7 @@ class BrixelateImplementation(object):
 	def hole_verts(self):
 
 		self.vertices = []
-		csv_file_name = os.path.abspath(os.path.join(os.path.dirname(__file__), 'hole_verts.csv'))
+		csv_file_name = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data', 'hole_verts.csv'))
 		with open(csv_file_name) as csvfile:
 			file_vertices = csv.reader(csvfile)
 

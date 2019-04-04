@@ -14,8 +14,8 @@ def homeObject(obj):
 	obj.location = [0, 0, obj.location[2] - z_height]
 
 
-	# obj.lock_location = [True, True, True]
-	# bpy.context.scene.my_settings.lock_objects = False
+# obj.lock_location = [True, True, True]
+# bpy.context.scene.my_settings.lock_objects = False
 
 
 def getVertices(pos, w, d, h):
@@ -250,6 +250,9 @@ class AutoBoolean(object):
 
 
 def convert_to_tris(obj):
+	"""
+	Triangulate all faces
+	"""
 	bpy.context.scene.objects.active = obj
 	bpy.ops.object.mode_set(mode='EDIT')
 	bpy.ops.mesh.select_all(action='SELECT')
@@ -257,16 +260,50 @@ def convert_to_tris(obj):
 
 	bpy.ops.object.mode_set(mode='OBJECT')
 
+
 def remesh(obj):
 	bpy.context.scene.objects.active = obj
-	md=obj.modifiers.new("remesh", 'REMESH')
-	md.octree_depth=2
+	md = obj.modifiers.new("remesh", 'REMESH')
+	md.octree_depth = 2
 	bpy.ops.object.modifier_apply(modifier="remesh")
+
 
 def displace(obj):
 	bpy.context.scene.objects.active = obj
 	md = obj.modifiers.new("displace", 'DISPLACE')
-	md.mid_level=0.95
+	md.mid_level = 0.95
 	bpy.ops.object.modifier_apply(modifier="displace")
 
 
+def obj_surface_area(obj):
+	"""
+	Calculate the surface area.
+	"""
+	bm = bmesh.new()
+	bm.from_mesh(obj.data)
+	bmesh.ops.triangulate(bm, faces=bm.faces)
+	return sum(f.calc_area() for f in bm.faces)
+
+
+def obj_volume(obj):
+	"""
+	Calculate the volume
+	"""
+	bm = bmesh.new()
+	bm.from_mesh(obj.data)
+	bmesh.ops.triangulate(bm, faces=bm.faces)
+	return bm.calc_volume()
+
+def obj_print_estimate(obj, wall_thickness, infill, wall_speed, infill_speed):
+	"""
+	Estimates how long the object will take to print
+	"""
+	vol = obj_volume(obj)
+	sa = obj_surface_area(obj)
+
+	wall_vol = sa * wall_thickness
+	wall_time = wall_vol * (1/wall_speed)
+	infill_vol = (vol - wall_vol) * infill
+	infill_time = infill_vol * (1/infill_speed)
+
+	return wall_time + infill_time

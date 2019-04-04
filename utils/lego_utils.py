@@ -4,7 +4,7 @@ import bpy
 from mathutils import Vector
 import numpy as np
 
-from .settings_utils import getSettings
+from brixelate.utils.settings_utils import getSettings
 
 
 class legoData():

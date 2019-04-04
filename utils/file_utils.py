@@ -2,7 +2,7 @@ import os
 
 import bpy
 
-from .lego_utils import legoData
+from brixelate.utils.lego_utils import legoData
 
 
 def csv_header(time_now, **kwargs):

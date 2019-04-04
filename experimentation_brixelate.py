@@ -1,8 +1,8 @@
 import datetime
 import copy
 
-from .settings_utils import getSettings
-from .file_utils import csv_header, csv_write
+from brixelate.utils.settings_utils import getSettings
+from brixelate.utils.file_utils import csv_header, csv_write
 from .simple_brixelate import SimpleBrixelate
 
 

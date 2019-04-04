@@ -21,12 +21,13 @@ from .operators import (resetBrixelate,
 						Implementation,
 						AddSplitPlane,
 						SplitObjectWithPlane,
-						automatedSplitting
+						automatedSplitting,
+						printEstimates
 						)
-from .ui_panel import BrixelPanel
-from .panel_settings import PanelSettings
+from .ui.ui_panel import BrixelPanel
+from .ui.panel_settings import PanelSettings
 from .surfaceCheck import SurfaceCheck, SurfaceUpdate
-from .colours import Colours
+from .utils.colours import Colours
 
 classes = (
 	simpleBrixelate,
@@ -41,6 +42,7 @@ classes = (
 	AddSplitPlane,
 	SplitObjectWithPlane,
 	automatedSplitting,
+	printEstimates,
 
 	BrixelPanel,
 	PanelSettings)

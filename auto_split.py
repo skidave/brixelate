@@ -2,9 +2,9 @@ import bpy
 from mathutils import Vector
 import numpy as np
 
-from .mesh_utils import add_plane, AutoBoolean
+from brixelate.utils.mesh_utils import add_plane, AutoBoolean
 from .implementData import ImplementData
-from .lego_utils import legoData
+from brixelate.utils.lego_utils import legoData
 
 
 class AutoSplit(object):

@@ -2,8 +2,8 @@ import time
 
 import bpy
 
-from .settings_utils import getSettings
-from .lego_utils import legoData
+from .utils.settings_utils import getSettings
+from .utils.lego_utils import legoData
 from .simple_brixelate import SimpleBrixelate
 from .experimentation_brixelate import ExperimentBrixelate
 from .ratio_brixelate import RatioBrixelate
@@ -11,7 +11,8 @@ from .implementation import BrixelateImplementation
 from .split import Split
 from .auto_split import AutoSplit
 from .implementData import ImplementData
-from .mesh_utils import add_plane
+from .utils.mesh_utils import add_plane
+from .print_estimate import PrintEstimate
 
 
 # TODO split 'shell' to make printable
@@ -144,7 +145,7 @@ class spinTest(bpy.types.Operator):
 				return True
 
 	def execute(self, context):
-		from .mesh_utils import get_angles
+		from brixelate.utils.mesh_utils import get_angles
 		from mathutils import Vector
 
 		object_selected = context.selected_objects[0]
@@ -273,6 +274,24 @@ class automatedSplitting(bpy.types.Operator):
 
 	def execute(self, context):
 		AutoSplit(context)
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+class printEstimates(bpy.types.Operator):
+	"""Creates print estimates of objects"""
+	bl_idname = "mesh.print_estimate"
+	bl_label = "Print Estimate"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if len([ob for ob in context.scene.objects if not ob.name.startswith('Brick')]) > 0:
+			return True
+
+	def execute(self, context):
+		PrintEstimate(context)
 		return {"FINISHED"}
 
 	def invoke(self, context, event):

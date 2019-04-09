@@ -1,10 +1,12 @@
 import random
 
 import bpy
+import bmesh
 from mathutils import Vector
 import numpy as np
 
 from brixelate.utils.settings_utils import getSettings
+from brixelate.utils.mesh_utils import AutoBoolean
 
 
 class legoData():
@@ -46,6 +48,13 @@ class legoData():
 		[1, 1, 1],
 	]
 
+	stud_height = 1.8
+	stud_diameter = 4.9 / 2
+
+	base_w = 8.
+	base_d = 8.
+	base_h = 3.2
+
 	@staticmethod
 	def getDims():
 
@@ -70,21 +79,25 @@ class legoData():
 		return w, d, h
 
 	# function to create a brick with width, depth and height at a point
-	def addNewBrickAtPoint(self, point, width, depth, height, number, name):
-		w, d, h = self.getDims()
+	def addNewBrickAtPoint(self, point, width, depth, height, number, name, studs=True, colour=True):
+		_w, _d, _h = self.getDims()
 
 		offset = 0.00
 		# offset = random.uniform(0.05, 0.2)
+		d = _d * depth + offset
+		w = _w * width + offset
+		h = _h * height + offset
+
 		Vertices = \
 			[
 				Vector((0.0, 0.0, 0.0)),
-				Vector((0.0, d * depth + offset, 0.0)),
-				Vector((w * width + offset, d * depth + offset, 0.0)),
-				Vector((w * width + offset, 0.0, 0.0)),
-				Vector((0.0, 0.0, h * height + offset)),
-				Vector((0.0, d * depth + offset, h * height + offset)),
-				Vector((w * width + offset, d * depth + offset, h * height + offset)),
-				Vector((w * width + offset, 0.0, h * height + offset)),
+				Vector((0.0, d, 0.0)),
+				Vector((w, d, 0.0)),
+				Vector((w, 0.0, 0.0)),
+				Vector((0.0, 0.0, h)),
+				Vector((0.0, d, h)),
+				Vector((w, d, h)),
+				Vector((w, 0.0, h)),
 			]
 
 		Faces = \
@@ -110,8 +123,26 @@ class legoData():
 
 		new_brick.select = True
 		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
-		new_brick.select = False
+
+		if studs:
+			for wi in range(width):
+				for di in range(depth):
+					w_pos = _w * (wi + 0.5)
+					d_pos = _d * (di + 0.5)
+
+					position = Vector((w_pos, d_pos, h))
+					self.add_stud(position)
+			for ob in bpy.context.scene.objects:
+				ob.select = False
+				if ob.name.startswith('~TEMPSTUD~'):
+					ob.select = True
+
+			new_brick.select = True
+			bpy.context.scene.objects.active = new_brick
+			joined_bricks = AutoBoolean('UNION').join_selected_meshes()
+
 		new_brick.location = point
+		bpy.context.scene.objects.active = None
 
 	def simple_add_brick_at_point(self, point, name):
 		depth, width, height = 1., 1., 1.
@@ -259,3 +290,24 @@ class legoData():
 		name = '{2}_{0}x{1}'.format(first, second, brick_type)
 
 		return name
+
+	def add_stud(self, position):
+
+		diameter = self.stud_diameter
+		height = self.stud_height
+		bm = bmesh.new()
+		bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=18, diameter1=diameter, diameter2=diameter,
+							  depth=height)
+
+		me = bpy.data.meshes.new("Mesh")
+		bm.to_mesh(me)
+		bm.free()
+		cylinder = bpy.data.objects.new("~TEMPSTUD~", me)
+		bpy.context.scene.objects.link(cylinder)
+
+		cylinder.select = True
+		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+		cylinder.select = False
+
+		offset_location = position + Vector((0, 0, height / 2 - 0.1))
+		cylinder.location = offset_location

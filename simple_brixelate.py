@@ -135,8 +135,10 @@ class SimpleBrixelate(object):
 		volume_percent = (lego_volume / object_volume)
 
 		# TODO parent bricks to the selected object
-
+		for ob in self.context.scene.objects:
+			ob.select = False
 		target_object.select = True
+		self.context.scene.objects.active = target_object
 
 		getSettings().show_hide_model = True
 		getSettings().show_hide_lego = True
@@ -298,7 +300,7 @@ class SimpleBrixelate(object):
 									translation += Vector((x_pos, y_pos, z_pos))
 									if 'add_bricks' in kwargs:
 										if kwargs['add_bricks']:
-											addNewBrickAtPoint(translation, width, depth, height, brick_num, brick_name)
+											addNewBrickAtPoint(translation, width, depth, height, brick_num, brick_name, studs=True, colour=True)
 									brick_num += 1
 									volume_count += width * depth * height
 		lego_volume = volume_count * w * d * h

@@ -30,7 +30,7 @@ class SimpleBrixelate(object):
 
 		homeObject(target_object)
 
-		use_shell_as_bounds = getSettings().use_shell_as_bounds
+		use_shell_as_bounds = True#getSettings().use_shell_as_bounds
 		bricks_to_use = legoData().listOfBricksToUse()
 
 		if 'ratio' in kwargs:

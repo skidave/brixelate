@@ -1,5 +1,5 @@
 import time
-
+import re
 import bpy
 
 from .utils.settings_utils import getSettings
@@ -117,9 +117,12 @@ class resetBrixelate(bpy.types.Operator):
 		objs = bpy.data.objects
 		for ob in scene.objects:
 			ob.hide = False
-			if ob.name.startswith('Brick ') or ob.name.startswith('SplitPlane'):
+			if ob.name.startswith('Brick ') or ob.name.startswith('SplitPlane') or re.match(r"[BP]_\dx\d", ob.name) is not None:
 				objs.remove(ob, True)
 
+		for mat in bpy.data.materials:
+			mat.user_clear()
+			bpy.data.materials.remove(mat)
 		getSettings().show_hide_model = True
 		getSettings().show_hide_lego = True
 
@@ -287,7 +290,7 @@ class printEstimates(bpy.types.Operator):
 
 	@classmethod
 	def poll(self, context):
-		if len([ob for ob in context.scene.objects if not ob.name.startswith('Brick')]) > 0:
+		if len([ob for ob in context.scene.objects if not ob.name.startswith('Brick') or re.match(r"[BP]_\dx\d", ob.name) is None]) > 0:
 			return True
 
 	def execute(self, context):

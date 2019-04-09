@@ -1,6 +1,7 @@
 import bpy
 from mathutils import Vector
 from operator import itemgetter
+import re
 
 from .utils.mesh_utils import obj_print_estimate
 from .implementData import ImplementData
@@ -19,7 +20,7 @@ class PrintEstimate(object):
 	def __init__(self, context):
 		self.context = context
 		self.scene = self.context.scene
-		target_objects = [ob for ob in self.scene.objects if not ob.name.startswith('Brick')]
+		target_objects = [ob for ob in self.scene.objects if not ob.name.startswith('Brick') or re.match(r"[BP]_\dx\d", ob.name) is None]
 		estimates = {}
 		total_print_time = 0
 		for ob in target_objects:

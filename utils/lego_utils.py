@@ -2,7 +2,7 @@ import random
 
 import bpy
 import bmesh
-from mathutils import Vector
+from mathutils import Vector, Color
 import numpy as np
 
 from brixelate.utils.settings_utils import getSettings
@@ -55,6 +55,14 @@ class legoData():
 	base_d = 8.
 	base_h = 3.2
 
+	# base colours for Nx1 bricks
+	base_colours = [(0.0, 0.9, 1),  # red
+					(0.592, 0.9, 1),  # blue
+					(0.339, 0.9, 1),  # green
+					(0.142, 0.9, 1),  # yellow
+					(0.797, 0.9, 1),  # purple
+					(0.486, 0.9, 1)]  # turquoise
+
 	@staticmethod
 	def getDims():
 
@@ -81,6 +89,8 @@ class legoData():
 	# function to create a brick with width, depth and height at a point
 	def addNewBrickAtPoint(self, point, width, depth, height, number, name, studs=True, colour=True):
 		_w, _d, _h = self.getDims()
+
+		new_brick_name = self.brickName([width, depth, height])
 
 		offset = 0.00
 		# offset = random.uniform(0.05, 0.2)
@@ -110,16 +120,12 @@ class legoData():
 				(3, 7, 4, 0)
 			]
 
-		name_string = "Brick " + str(number)
-		newMesh = bpy.data.meshes.new(name_string)
+		# name_string = "Brick " + str(number)
+		newMesh = bpy.data.meshes.new(new_brick_name)
 		newMesh.from_pydata(Vertices, [], Faces)
 		newMesh.update()
-		new_brick = bpy.data.objects.new(name_string, newMesh)
+		new_brick = bpy.data.objects.new(new_brick_name, newMesh)
 		bpy.context.scene.objects.link(new_brick)
-
-		# Change brick colour
-		brick_type = name[0]
-		self.randomiseColour(new_brick, brick_type)
 
 		new_brick.select = True
 		bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
@@ -142,7 +148,15 @@ class legoData():
 			joined_bricks = AutoBoolean('UNION').join_selected_meshes()
 
 		new_brick.location = point
+
+
+		# Change brick colour
+		if colour:
+			brick_colour = self.brick_colour([width, depth, height],new_brick_name)
+			new_brick.data.materials.append(brick_colour)
+
 		bpy.context.scene.objects.active = None
+
 
 	def simple_add_brick_at_point(self, point, name):
 		depth, width, height = 1., 1., 1.
@@ -252,12 +266,11 @@ class legoData():
 
 		return brick_names_dict
 
-	@staticmethod
-	def brickName(brick):
+	def brickName(self, brick_size):
 
-		height = brick[2]
-		width = brick[0]
-		depth = brick[1]
+		height = brick_size[2]
+		width = brick_size[0]
+		depth = brick_size[1]
 
 		if height == 6:
 			brick_type = 'D'
@@ -311,3 +324,31 @@ class legoData():
 
 		offset_location = position + Vector((0, 0, height / 2 - 0.1))
 		cylinder.location = offset_location
+
+	def brick_colour(self, brick_size, brick_name):
+		height = brick_size[2]
+		width = brick_size[0]
+		depth = brick_size[1]
+
+		print(width)
+
+		if brick_name in bpy.data.materials:
+			mat = bpy.data.materials[brick_name]
+
+		else:
+			colour = self.base_colours[depth - 1]
+
+			if height == 1:
+				colour = [colour[0], colour[1] - 0.2, colour[2]]
+
+			if width == 2:
+				colour = [colour[0] + 0.028, colour[1], colour[2]]
+
+			c = Color()
+			c.hsv = colour[0], colour[1], colour[2]
+
+			mat_name_string = brick_name
+			mat = bpy.data.materials.new(name=mat_name_string)
+			mat.diffuse_color = c
+
+		return mat

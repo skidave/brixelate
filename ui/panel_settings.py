@@ -1,21 +1,22 @@
 import bpy
-from bpy.props import (StringProperty,
-					   BoolProperty,
+from bpy.props import (BoolProperty,
 					   BoolVectorProperty,
 					   IntProperty,
 					   FloatProperty,
-					   FloatVectorProperty,
-					   EnumProperty,
-					   PointerProperty,
 					   )
 
-from .settings_utils import *
+from brixelate.utils.settings_utils import *
+
 
 class PanelSettings(bpy.types.PropertyGroup):
+	use_lego = BoolProperty(name="Use Lego Bricks", default=True)
+	use_nano = BoolProperty(name="Use NanoBlocks", default=False)
+	use_duplo = BoolProperty(name="Use Duplo Bricks", default=False)
+
 	use_shell_as_bounds = BoolProperty(
 		name="Confine to Shell",
 		description="Constrains the LEGO bricks to within the shell",
-		default=False
+		default=True
 	)
 
 	show_hide_model = BoolProperty(
@@ -33,6 +34,8 @@ class PanelSettings(bpy.types.PropertyGroup):
 	)
 
 	brick_selection = BoolProperty(name="Expand Brick Selection", default=False)
+
+	experimentation = BoolProperty(name="Expand Experiments", default=False)
 
 	all_plates = BoolProperty(name="Toggles All Plates", default=True, update=allPlates)
 	all_bricks = BoolProperty(name="Toggles All Bricks", default=True, update=allBricks)
@@ -62,3 +65,67 @@ class PanelSettings(bpy.types.PropertyGroup):
 		max=50
 
 	)
+
+	start_ratio = FloatProperty(
+		name='Start',
+		description='Brick to Object Ratio',
+		default=0.05,
+		min=0.00001,
+		max=0.9999
+	)
+
+	end_ratio = FloatProperty(
+		name='End',
+		description='Brick to Object Ratio',
+		default=0.5,
+		min=0.0001,
+		max=1.0
+	)
+
+	ratio_step = IntProperty(
+		name='Num',
+		description='Number of ratios to test',
+		default=10,
+		min=2,
+		max=500
+	)
+
+	spin_object = BoolProperty(name="Spin Object", default=False)
+
+	roll = IntProperty(
+		name='Roll',
+		description='Number of Roll Positions',
+		default=10,
+		min=1,
+		max=180
+	)
+	pitch = IntProperty(
+		name='Pitch',
+		description='Number of Pitch Positions',
+		default=10,
+		min=1,
+		max=180
+	)
+	yaw = IntProperty(
+		name='Yaw',
+		description='Number of Yaw Positions',
+		default=10,
+		min=1,
+		max=180
+	)
+
+	viable_split = BoolProperty(
+		name="Viable Split",
+		description="Checks if the Lego Surface will produce a viable split",
+		default=False)
+
+	displace_split = BoolProperty(
+		name="Displace Objects",
+		description="Displaces resultant objects from plane split",
+		default=False)
+
+	lock_objects = BoolProperty(
+		name="Lock Objects",
+		description="Locks Objects",
+		default=False,
+		update=lockObjects)

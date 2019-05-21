@@ -149,7 +149,6 @@ class legoData():
 
 		new_brick.location = point
 
-
 		# Change brick colour
 		if colour:
 			brick_colour = self.brick_colour([width, depth, height],new_brick_name)
@@ -330,7 +329,7 @@ class legoData():
 		width = brick_size[0]
 		depth = brick_size[1]
 
-		print(width)
+		#print(width)
 
 		if brick_name in bpy.data.materials:
 			mat = bpy.data.materials[brick_name]

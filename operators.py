@@ -107,21 +107,30 @@ class resetBrixelate(bpy.types.Operator):
 	@classmethod
 	def poll(self, context):
 		scene = context.scene
-		if len(scene.objects) > 0:
+		count = 0
+		for ob in scene.objects:
+			if re.match(r"~COPY~", ob.name) or re.match(r"[BP]_\dx\d", ob.name):
+				count +=1
+		if count > 1:
 			return True
+		else:
+			return False
 
 	def execute(self, context):
 		start_time = time.time()
 		scene = context.scene
 
-		objs = bpy.data.objects
-		for ob in scene.objects:
+		for ob in bpy.data.objects:
 			ob.hide = False
-			if ob.name.startswith('Brick ') or ob.name.startswith('SplitPlane') or re.match(r"[BP]_\dx\d", ob.name) is not None:
-				objs.remove(ob, True)
+			#if ob.name.startswith('Brick ') or ob.name.startswith('SplitPlane') or re.match(r"[BP]_\dx\d", ob.name) is not None:
+			if re.match(r"~COPY~", ob.name) is None:
+				bpy.data.objects.remove(ob, do_unlink=True)
+			else:
+				copy_name = ob.name
+				ob.name = copy_name.replace('~COPY~','')
+				ob.hide = False
 
 		for mat in bpy.data.materials:
-			mat.user_clear()
 			bpy.data.materials.remove(mat)
 		getSettings().show_hide_model = True
 		getSettings().show_hide_lego = True
@@ -196,7 +205,7 @@ class Implementation(bpy.types.Operator):
 		scene = context.scene
 		bricks = 0
 		for ob in scene.objects:
-			if ob.name.startswith('Brick'):
+			if re.match(r"[BP]_\dx\d", ob.name):
 				bricks += 1
 
 		if bricks > 0:

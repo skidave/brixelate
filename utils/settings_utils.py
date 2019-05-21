@@ -1,5 +1,5 @@
 import bpy
-
+import re
 
 def getSettings():
 	return bpy.context.scene.my_settings
@@ -8,10 +8,12 @@ def getSettings():
 def showHideModel(self, context):
 	scene = bpy.context.scene
 
-	string = "Brick "
 	for ob in scene.objects:
-		if ob.name.startswith(string) is False:
+		if re.match(r"[BP]_\dx\d", ob.name) is None:
 			ob.hide = not scene.my_settings.show_hide_model
+
+		if ob.name.startswith('~COPY~'):
+			ob.hide = True
 	return None
 
 
@@ -20,7 +22,8 @@ def showHideLEGO(self, context):
 
 	string = "Brick "
 	for ob in scene.objects:
-		if ob.name.startswith(string):
+		#if ob.name.startswith(string):
+		if re.match(r"[BP]_\dx\d", ob.name):
 			ob.hide = not scene.my_settings.show_hide_lego
 
 	return None

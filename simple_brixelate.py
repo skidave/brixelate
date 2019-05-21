@@ -1,10 +1,9 @@
 import time
 import copy
-import math
 import re
-import collections
 from operator import itemgetter
 
+import math
 import bpy
 import bmesh
 from mathutils import Vector
@@ -24,13 +23,14 @@ class SimpleBrixelate(object):
 		self.scene = self.context.scene
 		self.target_object = target_object
 
+		homeObject(self.target_object)
+		self.object_copy(self.target_object)
+
 		self.brixelate(self.target_object)
 
 	def brixelate(self, target_object, **kwargs):
 
-		homeObject(target_object)
-
-		use_shell_as_bounds = True#getSettings().use_shell_as_bounds
+		use_shell_as_bounds = True  # getSettings().use_shell_as_bounds
 		bricks_to_use = legoData().listOfBricksToUse()
 
 		if 'ratio' in kwargs:
@@ -104,7 +104,6 @@ class SimpleBrixelate(object):
 		if 'output' in kwargs:
 			if kwargs['output']:
 				add_bricks = False
-
 
 		if 'ratio' in kwargs:
 			ratio = kwargs['ratio']
@@ -298,9 +297,9 @@ class SimpleBrixelate(object):
 									translation = Vector(
 										((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
 									translation += Vector((x_pos, y_pos, z_pos))
-									if 'add_bricks' in kwargs:
-										if kwargs['add_bricks']:
-											addNewBrickAtPoint(translation, width, depth, height, brick_num, brick_name, studs=True, colour=True)
+									if kwargs.get('add_bricks', False):
+										addNewBrickAtPoint(translation, width, depth, height, brick_num, brick_name,
+														   studs=True, colour=True)
 									brick_num += 1
 									volume_count += width * depth * height
 		lego_volume = volume_count * w * d * h
@@ -314,6 +313,14 @@ class SimpleBrixelate(object):
 
 		end_time = time.time()
 		packing_time = (end_time - start_time)
+
+		if kwargs.get('add_bricks', False):
+			for ob in scene.objects:
+				ob.select = False
+				if re.match(r"[BP]_\dx\d", ob.name):
+					ob.select = True
+
+			bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY', center='BOUNDS')
 
 		return lego_volume, used_bricks_dict, brick_count, packed_brick_array
 
@@ -333,3 +340,11 @@ class SimpleBrixelate(object):
 		sorted_bricks = sorted(brick_dict.items(), key=itemgetter(1), reverse=True)
 		ImplementData.sorted_bricks = sorted_bricks
 
+	def object_copy(self, target_object):
+		target_object.select = True
+		bpy.ops.object.duplicate()
+		dup = self.context.selected_objects[0]
+
+		dup.name = "~COPY~" + target_object.name
+		dup.hide = True
+		dup.select = False

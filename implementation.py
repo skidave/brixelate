@@ -27,6 +27,8 @@ class BrixelateImplementation(object):
 
 		self.bricks_boolean()
 
+		ImplementData.shell = False
+
 	def bricks_boolean(self):
 
 		mesh = self.ops.mesh

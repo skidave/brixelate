@@ -7,3 +7,4 @@ class ImplementData(object):
 	sorted_bricks = None
 	print_estimates = None
 	total_print_time = 0
+	shell = False

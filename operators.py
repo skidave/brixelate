@@ -13,6 +13,7 @@ from .auto_split import AutoSplit
 from .implementData import ImplementData
 from .utils.mesh_utils import add_plane
 from .print_estimate import PrintEstimate
+from .assembly import Assembly
 
 
 # TODO split 'shell' to make printable
@@ -208,7 +209,7 @@ class Implementation(bpy.types.Operator):
 			if re.match(r"[BP]_\dx\d", ob.name):
 				bricks += 1
 
-		if bricks > 0:
+		if bricks > 0 and ImplementData.shell:
 			return True
 
 	def execute(self, context):
@@ -299,11 +300,29 @@ class printEstimates(bpy.types.Operator):
 
 	@classmethod
 	def poll(self, context):
-		if len([ob for ob in context.scene.objects if not ob.name.startswith('Brick') or re.match(r"[BP]_\dx\d", ob.name) is None]) > 0:
+		if len([ob for ob in context.scene.objects if re.match(r"[BP]_\dx\d", ob.name) is None]) > 0:
 			return True
 
 	def execute(self, context):
 		PrintEstimate(context)
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+class assemblyInstructions(bpy.types.Operator):
+	"""Creates assembly instructions"""
+	bl_idname = "mesh.assembly"
+	bl_label = "Assembly Instructions"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if len(context.scene.objects) > 0:
+			return True
+
+	def execute(self, context):
+		Assembly()
 		return {"FINISHED"}
 
 	def invoke(self, context, event):

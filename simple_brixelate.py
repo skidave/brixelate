@@ -97,8 +97,8 @@ class SimpleBrixelate(object):
 		bricks_array = temp_dict[to_use]['array']
 
 		ImplementData.start_point = start_point
-
 		ImplementData.object_name = target_object.name
+		ImplementData.shell = True
 
 		add_bricks = True
 		if 'output' in kwargs:

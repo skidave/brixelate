@@ -48,6 +48,8 @@ class AutoSplit(object):
 			if ob.name.startswith(self.target_object.name):
 				ob.select = True
 
+		bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
+
 
 
 	def find_plane_positions(self, start_point, array, count):

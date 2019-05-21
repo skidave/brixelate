@@ -12,7 +12,7 @@ def showHideModel(self, context):
 		if re.match(r"[BP]_\dx\d", ob.name) is None:
 			ob.hide = not scene.my_settings.show_hide_model
 
-		if ob.name.startswith('~COPY~'):
+		if ob.name.startswith('~COPY~') or ob.name.startswith('SplitPlane'):
 			ob.hide = True
 	return None
 

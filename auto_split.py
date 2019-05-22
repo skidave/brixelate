@@ -1,5 +1,6 @@
 import bpy
 from mathutils import Vector
+from mathutils import Matrix
 import numpy as np
 
 from brixelate.utils.mesh_utils import add_plane, AutoBoolean
@@ -46,9 +47,18 @@ class AutoSplit(object):
 		self.ops.object.select_all(action='DESELECT')
 		for ob in self.scene.objects:
 			if ob.name.startswith(self.target_object.name):
-				ob.select = True
+				ob.select=True
+				bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+				# vertices = [Vector(corner) for corner in ob.bound_box]
+				# z = vertices[1][2]
+				# x = (vertices[6][0]-vertices[1][0])/2 + vertices[1][0]
+				# y = (vertices[6][1]-vertices[1][1])/2 + vertices[1][1]
+				# new_origin = Vector((x,y,z))
+				#
+				# ob.data.transform(Matrix.Translation(-new_origin))
+				# ob.matrix_world.translation += new_origin
 
-		bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
+
 
 
 
@@ -70,9 +80,10 @@ class AutoSplit(object):
 
 		for id in range(1, count + 1):
 			# print('index: ' + str(id))
+			#get indices of brick in array
 			indices = np.argwhere(array == id)
 			# returns [z,y,x]
-			# print(indices)
+
 			bottomleft = np.min(indices, axis=0)
 			bottom = bottomleft[0]
 			topright = np.max(indices, axis=0)
@@ -89,7 +100,6 @@ class AutoSplit(object):
 					new_indices[i][0] = y
 					new_indices[i][1] = x
 					i += 1
-			# print(new_indices)
 
 			covered_count = 0
 			for ind in new_indices:
@@ -117,6 +127,8 @@ class AutoSplit(object):
 
 		zpositions = list(set(zpositions))
 
+		print(zpositions)
+
 		overlap = {}
 		for pos in zpositions:
 			o_count = 0
@@ -128,14 +140,14 @@ class AutoSplit(object):
 			else:
 				overlap[o_count] = [pos]
 
-		print("brick positions:")
+		print("possible positions:")
 		print(possible_positions)
 
 		print("cricital positions:")
 		print(critical_positions)
-
-		print('overlap')
-		print(overlap)
+		#
+		# print('overlap')
+		# print(overlap)
 
 		new_z = []
 		keys = list(overlap.keys())
@@ -154,10 +166,13 @@ class AutoSplit(object):
 					for brick in brick_to_remove:
 						possible_positions.remove(brick)
 					new_z.append(pos)
-		# TODO add compulsory planes
-		print(new_z)
+
+		for crit in critical_positions:
+			if crit not in new_z:
+				new_z.append(crit)
+
 		z_world = [Vector((0, 0, (z - midpointZ) * h)) + start_point + plane_offset for z in new_z]
-		print(z_world)
+		# print(z_world)
 
 		return z_world
 

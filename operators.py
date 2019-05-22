@@ -322,7 +322,7 @@ class assemblyInstructions(bpy.types.Operator):
 			return True
 
 	def execute(self, context):
-		Assembly()
+		Assembly(context)
 		return {"FINISHED"}
 
 	def invoke(self, context, event):

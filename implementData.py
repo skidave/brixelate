@@ -8,3 +8,4 @@ class ImplementData(object):
 	print_estimates = None
 	total_print_time = 0
 	shell = False
+	height_dict = {'ordered':[], 'data':{}}

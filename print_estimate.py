@@ -21,7 +21,6 @@ class PrintEstimate(object):
 		self.context = context
 		self.scene = self.context.scene
 		target_objects = [ob for ob in self.scene.objects if not ob.name.startswith('~COPY~') and not ob.name.startswith('SplitPlane') and re.match(r"[BP]_\dx\d", ob.name) is None]
-		print(target_objects)
 		estimates = {}
 		total_print_time = 0
 		for ob in target_objects:

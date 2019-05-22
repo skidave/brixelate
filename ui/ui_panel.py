@@ -119,6 +119,8 @@ class BrixelPanel(bpy.types.Panel):
 		row = topbox.row()
 		row.operator("mesh.assembly", text="Assembly Instructions", icon="MOD_BUILD")
 		row = topbox.row()
+		row.prop(settings, "assembly_level")
+		row = topbox.row()
 		row.operator("mesh.print_estimate", text="Print Estimate", icon="MESH_PLANE")
 		topbox.separator()
 		toprow = topbox.row()

@@ -49,6 +49,18 @@ class PanelSettings(bpy.types.PropertyGroup):
 								 default=(True, True, True, True, True, True))  # 1x1,2,3,4,6,8
 	bricks2 = BoolVectorProperty(name="2xN Bricks", size=5, default=(True, True, True, True, True))  # 2x2,3,4,6,8
 
+
+	assembly_level = FloatProperty(
+		name='Stage',
+		description="The assembly order",
+		default=0,
+		min=0,
+		max=100,
+		precision=0,
+		subtype='PERCENTAGE',
+		update=assemblyUpdate
+	)
+
 	max_range = IntProperty(
 		name='Num',
 		description='Number of object repetitions',

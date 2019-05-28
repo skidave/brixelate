@@ -127,7 +127,7 @@ class AutoSplit(object):
 
 		zpositions = list(set(zpositions))
 
-		print(zpositions)
+		#print(zpositions)
 
 		overlap = {}
 		for pos in zpositions:
@@ -171,6 +171,7 @@ class AutoSplit(object):
 			if crit not in new_z:
 				new_z.append(crit)
 
+		print(new_z)
 		z_world = [Vector((0, 0, (z - midpointZ) * h)) + start_point + plane_offset for z in new_z]
 		# print(z_world)
 

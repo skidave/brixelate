@@ -140,11 +140,11 @@ class AutoSplit(object):
 			else:
 				overlap[o_count] = [pos]
 
-		print("possible positions:")
-		print(possible_positions)
-
-		print("cricital positions:")
-		print(critical_positions)
+		# print("possible positions:")
+		# print(possible_positions)
+		#
+		# print("cricital positions:")
+		# print(critical_positions)
 		#
 		# print('overlap')
 		# print(overlap)

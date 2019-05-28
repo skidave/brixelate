@@ -51,6 +51,7 @@ class BrixelateImplementation(object):
 		self.scene.objects.active = self.scene.objects['temp '+name]
 		bpy.ops.object.join()
 		bpy.ops.object.mode_set(mode='EDIT')
+		bpy.ops.mesh.select_mode(type="EDGE")
 		# remove doubles
 		mesh.remove_doubles(threshold=0.0001)
 		# select interior faces

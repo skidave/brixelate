@@ -1,11 +1,11 @@
 import bpy
 from mathutils import Vector
-from mathutils import Matrix
 import numpy as np
 
 from brixelate.utils.mesh_utils import add_plane, AutoBoolean
 from .implementData import ImplementData
 from brixelate.utils.lego_utils import legoData
+from .utils.settings_utils import getSettings
 
 
 class AutoSplit(object):
@@ -22,44 +22,36 @@ class AutoSplit(object):
 		array = ImplementData.array
 		count = ImplementData.brick_count
 
-		x, y = self.target_object.dimensions[0], self.target_object.dimensions[1]
-		if x > y:
-			size = x
-		else:
-			size = y
+		x, y, z = self.target_object.dimensions[0], self.target_object.dimensions[1], self.target_object.dimensions[2]
+		size = x if x > y else y
 
 		self.plane_positions = self.find_plane_positions(start_point, array, count)
 
+		vert_pos = self.find_vert_plane_positions(start_point, size)
+
 		for p in self.plane_positions:
 			add_plane(context, colour=False, size=size, location=p, name='SplitPlane')
+
+		for vp in vert_pos:
+			add_plane(context, colour=False, size=size+1, location=vp,rotation=(90,0,0), name='SplitPlane')
 
 		# Join all planes together into one object
 		objs = bpy.data.objects
 		for obj in objs:
 			obj.select = False
 			if obj.name.startswith('SplitPlane'):
+				self.scene.objects.active = obj
 				obj.select = True
 
-		planes = AutoBoolean('UNION').join_selected_meshes()
-
+		planes_to_use = AutoBoolean('UNION').join_selected_meshes()
 		# split target object with planes
-		self.plane_bool_difference(self.target_object, planes)
+		self.plane_bool_difference(self.target_object, planes_to_use)
+
 		self.ops.object.select_all(action='DESELECT')
 		for ob in self.scene.objects:
 			if ob.name.startswith(self.target_object.name):
-				ob.select=True
+				ob.select = True
 				bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
-				# vertices = [Vector(corner) for corner in ob.bound_box]
-				# z = vertices[1][2]
-				# x = (vertices[6][0]-vertices[1][0])/2 + vertices[1][0]
-				# y = (vertices[6][1]-vertices[1][1])/2 + vertices[1][1]
-				# new_origin = Vector((x,y,z))
-				#
-				# ob.data.transform(Matrix.Translation(-new_origin))
-				# ob.matrix_world.translation += new_origin
-
-
-
 
 
 	def find_plane_positions(self, start_point, array, count):
@@ -80,7 +72,7 @@ class AutoSplit(object):
 
 		for id in range(1, count + 1):
 			# print('index: ' + str(id))
-			#get indices of brick in array
+			# get indices of brick in array
 			indices = np.argwhere(array == id)
 			# returns [z,y,x]
 
@@ -127,7 +119,7 @@ class AutoSplit(object):
 
 		zpositions = list(set(zpositions))
 
-		#print(zpositions)
+		# print(zpositions)
 
 		overlap = {}
 		for pos in zpositions:
@@ -176,6 +168,23 @@ class AutoSplit(object):
 		# print(z_world)
 
 		return z_world
+
+	def find_vert_plane_positions(self, start_point, size):
+
+		vert_bool = getSettings().vert
+		vert_count = getSettings().num_vert_slices
+		if vert_bool:
+			positions = []
+			for i in range(1, vert_count):
+				p = ((vert_count-i)*size)/vert_count - size/2
+				positions.append(p)
+
+
+
+			positions = [Vector((0,p, 0))+start_point for p in positions]
+			return positions
+		else:
+			pass
 
 	def plane_bool_difference(self, object, planes):
 

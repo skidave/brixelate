@@ -141,8 +141,9 @@ def get_angles(number_points):
 	return phi_s
 
 
-def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_location, name="SplitPlane"):
-	bpy.ops.mesh.primitive_plane_add(radius=size, location=location)
+def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_location, rotation=(0,0,0), name="SplitPlane"):
+	rotation_rad = tuple(np.deg2rad(i) for i in rotation)
+	bpy.ops.mesh.primitive_plane_add(radius=size, location=location, rotation=rotation_rad)
 	split_plane = context.selected_objects[0]
 	split_plane.name = name
 

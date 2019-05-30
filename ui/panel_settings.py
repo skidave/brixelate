@@ -49,6 +49,18 @@ class PanelSettings(bpy.types.PropertyGroup):
 								 default=(True, True, True, True, True, True))  # 1x1,2,3,4,6,8
 	bricks2 = BoolVectorProperty(name="2xN Bricks", size=5, default=(True, True, True, True, True))  # 2x2,3,4,6,8
 
+	num_vert_slices = IntProperty(
+		name='Slices',
+		description="Number of vertical slices",
+		default=2,
+		min=1,
+		max = 10
+	)
+
+	vert = BoolProperty(
+		name="Vertical Slice",
+		description="Toggles vertical slicing",
+		default=False)
 
 	assembly_level = FloatProperty(
 		name='Stage',

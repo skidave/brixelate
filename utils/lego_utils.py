@@ -56,12 +56,12 @@ class legoData():
 	base_h = 3.2
 
 	# base colours for Nx1 bricks
-	base_colours = [(0.0, 0.9, 1),  # red
-					(0.592, 0.9, 1),  # blue
-					(0.339, 0.9, 1),  # green
-					(0.142, 0.9, 1),  # yellow
-					(0.797, 0.9, 1),  # purple
-					(0.486, 0.9, 1)]  # turquoise
+	base_colours = {1:(0.0, 0.9, 1),  # red
+					2:(0.592, 0.9, 1),  # blue
+					3:(0.339, 0.9, 1),  # green
+					4:(0.142, 0.9, 1),  # yellow
+					6:(0.797, 0.9, 1),  # purple
+					8:(0.486, 0.9, 1)}  # turquoise
 
 	@staticmethod
 	def getDims():
@@ -329,13 +329,11 @@ class legoData():
 		width = brick_size[0]
 		depth = brick_size[1]
 
-		#print(width)
-
 		if brick_name in bpy.data.materials:
 			mat = bpy.data.materials[brick_name]
 
 		else:
-			colour = self.base_colours[depth - 1]
+			colour = self.base_colours[depth]
 
 			if height == 1:
 				colour = [colour[0], colour[1] - 0.2, colour[2]]

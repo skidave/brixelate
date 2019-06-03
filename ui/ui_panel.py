@@ -30,7 +30,7 @@ class BrixelPanel(bpy.types.Panel):
 		# box.prop(settings, "use_shell_as_bounds")
 
 		if settings.use_lego:
-			box.label("LEGO Brick Layout", icon="SCRIPT")  # or SCRIPTWIN
+			box.label("Brixellation", icon="SCRIPT")  # or SCRIPTWIN
 			row = box.row(align=True)
 			row.prop(settings, "all_plates", text="LEGO Plates",
 					 icon="FILE_TICK" if settings.all_plates else "RADIOBUT_OFF",
@@ -95,7 +95,7 @@ class BrixelPanel(bpy.types.Panel):
 
 		layout.separator()
 		topbox = layout.box()
-		topbox.label("Segmentation", icon="MESH_GRID")
+		topbox.label("Shelling", icon="MESH_GRID")
 		# row = topbox.row()
 		# row.operator("tool.implementation", text="Create Shell", icon="UGLYPACKAGE")
 		box = topbox.box()

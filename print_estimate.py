@@ -24,15 +24,15 @@ class PrintEstimate(object):
 		estimates = {}
 		total_print_time = 0
 		for ob in target_objects:
-			print_estimate = obj_print_estimate(ob, self.WALL_THICKNESS,self.INFILL, self.WALL_SPEED, self.INFILL_SPEED)
+			sa, vol, print_estimate = obj_print_estimate(ob, self.WALL_THICKNESS,self.INFILL, self.WALL_SPEED, self.INFILL_SPEED)
 
-			estimates[ob.name] = print_estimate
+			estimates[ob.name] = {'print':print_estimate,
+								  'area':sa,
+								  'vol':vol}
 
 			total_print_time += print_estimate
 
-		self.sorted_estimates = sorted(estimates.items(), key=itemgetter(1), reverse=True)
-
-		ImplementData.print_estimates = self.sorted_estimates
+		ImplementData.print_estimates = estimates
 		ImplementData.total_print_time = total_print_time
 
 

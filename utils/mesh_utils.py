@@ -307,4 +307,4 @@ def obj_print_estimate(obj, wall_thickness, infill, wall_speed, infill_speed):
 	infill_vol = (vol - wall_vol) * infill
 	infill_time = infill_vol * (1/infill_speed)
 
-	return wall_time + infill_time
+	return sa, vol, wall_time + infill_time

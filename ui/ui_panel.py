@@ -96,8 +96,8 @@ class BrixelPanel(bpy.types.Panel):
 		layout.separator()
 		topbox = layout.box()
 		topbox.label("Segmentation", icon="MESH_GRID")
-		row = topbox.row()
-		row.operator("tool.implementation", text="Create Shell", icon="UGLYPACKAGE")
+		# row = topbox.row()
+		# row.operator("tool.implementation", text="Create Shell", icon="UGLYPACKAGE")
 		box = topbox.box()
 		box.label('Automatic', icon="SCRIPTWIN")
 		row = box.row()
@@ -118,13 +118,13 @@ class BrixelPanel(bpy.types.Panel):
 
 		layout.separator()
 		topbox = layout.box()
-		topbox.label('Fabrication')
+		topbox.label('Fabrication', icon="SOLID")
 		row = topbox.row()
 		row.operator("mesh.assembly", text="Assembly Instructions", icon="MOD_BUILD")
 		row = topbox.row()
 		row.prop(settings, "assembly_level")
-		row = topbox.row()
-		row.operator("mesh.print_estimate", text="Print Estimate", icon="MESH_PLANE")
+		# row = topbox.row()
+		# row.operator("mesh.print_estimate", text="Print Estimate", icon="MESH_PLANE")
 		topbox.separator()
 		toprow = topbox.row()
 
@@ -153,13 +153,17 @@ class BrixelPanel(bpy.types.Panel):
 		row = innerbox.row()
 		if ImplementData.print_estimates is not None:
 				col = row.column()
-				for el in ImplementData.print_estimates:
-					string = "{0}:    {1:.1f}".format(el[0], el[1])
+				print_est = ImplementData.print_estimates
+				for el in print_est:
+					string = "{0}:    {1:.1f}".format(el, print_est[el]['print'])
 					col.label(string)
 				col.label("Total:    {:.1f}".format(ImplementData.total_print_time))
 		else:
 			col = row.column()
 			col.label('No Data')
+
+		toprow = topbox.row()
+		toprow.operator("mesh.data_output", text="Output Data", icon="FCURVE")
 
 		if len(scene.objects) > 0:
 
@@ -180,37 +184,37 @@ class BrixelPanel(bpy.types.Panel):
 		layout.separator()
 		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
 
-		layout.separator()
-		box = layout.box()
-		box.prop(settings, "experimentation", icon="TRIA_DOWN" if settings.experimentation else "TRIA_RIGHT",
-				 text="Experimentation", emboss=False)
-
-		if settings.experimentation:
-			box.label("Scale", icon="FCURVE")
-			row = box.row()
-			row.prop(settings, "max_range")
-			row.prop(settings, "scale_factor", slider=True)
-
-			box.operator("tool.brixelate_experiments", text="Run Scales", icon="FILE_TICK")
-
-			layout.separator()
-			# box = layout.box()
-			box.label("Ratio", icon="SORTSIZE")
-			row = box.row()
-			row.prop(settings, "start_ratio")
-
-			row.prop(settings, "end_ratio")
-			row = box.row()
-			row.prop(settings, "ratio_step", text="Number of Steps")
-			row = box.row()
-			row.prop(settings, "spin_object")
-			if settings.spin_object:
-				row = box.row(align=True)
-				row.prop(settings, "roll")
-				row.prop(settings, "pitch")
-				row.prop(settings, "yaw")
-
-			box.operator("tool.brixelate_ratio", text="Run Ratios", icon="FILE_TICK")
+		# layout.separator()
+		# box = layout.box()
+		# box.prop(settings, "experimentation", icon="TRIA_DOWN" if settings.experimentation else "TRIA_RIGHT",
+		# 		 text="Experimentation", emboss=False)
+		#
+		# if settings.experimentation:
+		# 	box.label("Scale", icon="FCURVE")
+		# 	row = box.row()
+		# 	row.prop(settings, "max_range")
+		# 	row.prop(settings, "scale_factor", slider=True)
+		#
+		# 	box.operator("tool.brixelate_experiments", text="Run Scales", icon="FILE_TICK")
+		#
+		# 	layout.separator()
+		# 	# box = layout.box()
+		# 	box.label("Ratio", icon="SORTSIZE")
+		# 	row = box.row()
+		# 	row.prop(settings, "start_ratio")
+		#
+		# 	row.prop(settings, "end_ratio")
+		# 	row = box.row()
+		# 	row.prop(settings, "ratio_step", text="Number of Steps")
+		# 	row = box.row()
+		# 	row.prop(settings, "spin_object")
+		# 	if settings.spin_object:
+		# 		row = box.row(align=True)
+		# 		row.prop(settings, "roll")
+		# 		row.prop(settings, "pitch")
+		# 		row.prop(settings, "yaw")
+		#
+		# 	box.operator("tool.brixelate_ratio", text="Run Ratios", icon="FILE_TICK")
 
 # end draw
 

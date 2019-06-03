@@ -9,7 +9,7 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 
-from .utils.mesh_utils import getVertices, getEdges, rayInside, homeObject, obj_volume
+from .utils.mesh_utils import getVertices, getEdges, rayInside, homeObject, obj_volume, obj_surface_area
 from .utils.lego_utils import legoData
 from .utils.settings_utils import getSettings
 from .implementData import ImplementData
@@ -98,6 +98,8 @@ class SimpleBrixelate(object):
 
 		ImplementData.start_point = start_point
 		ImplementData.object_name = target_object.name
+		ImplementData.object_sa = obj_surface_area(target_object)
+		ImplementData.object_vol = obj_volume(target_object)
 		ImplementData.shell = True
 
 		add_bricks = True

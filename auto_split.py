@@ -6,6 +6,7 @@ from brixelate.utils.mesh_utils import add_plane, AutoBoolean
 from .implementData import ImplementData
 from brixelate.utils.lego_utils import legoData
 from .utils.settings_utils import getSettings
+from .print_estimate import PrintEstimate
 
 
 class AutoSplit(object):
@@ -27,13 +28,18 @@ class AutoSplit(object):
 
 		self.plane_positions = self.find_plane_positions(start_point, array, count)
 
+		ImplementData.horizontal_slices = len(self.plane_positions)
+
 		vert_pos = self.find_vert_plane_positions(start_point, size)
+
+		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
 
 		for p in self.plane_positions:
 			add_plane(context, colour=False, size=size, location=p, name='SplitPlane')
 
-		for vp in vert_pos:
-			add_plane(context, colour=False, size=size+1, location=vp,rotation=(90,0,0), name='SplitPlane')
+		if vert_pos:
+			for vp in vert_pos:
+				add_plane(context, colour=False, size=size+1, location=vp,rotation=(90,0,0), name='SplitPlane')
 
 		# Join all planes together into one object
 		objs = bpy.data.objects
@@ -52,6 +58,8 @@ class AutoSplit(object):
 			if ob.name.startswith(self.target_object.name):
 				ob.select = True
 				bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+
+		PrintEstimate(context)
 
 
 	def find_plane_positions(self, start_point, array, count):
@@ -172,7 +180,7 @@ class AutoSplit(object):
 	def find_vert_plane_positions(self, start_point, size):
 
 		vert_bool = getSettings().vert
-		vert_count = getSettings().num_vert_slices
+		vert_count = getSettings().num_vert_slices + 1
 		if vert_bool:
 			positions = []
 			for i in range(1, vert_count):

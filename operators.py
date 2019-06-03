@@ -14,7 +14,7 @@ from .implementData import ImplementData
 from .utils.mesh_utils import add_plane
 from .print_estimate import PrintEstimate
 from .assembly import Assembly
-
+from .data_output import DataOutput
 
 # TODO split 'shell' to make printable
 
@@ -35,6 +35,9 @@ class simpleBrixelate(bpy.types.Operator):
 	def execute(self, context):
 		target_object = context.selected_objects[0]
 		SimpleBrixelate(context, target_object)
+
+		BrixelateImplementation(context)
+
 		self.report({"INFO"}, "Brixelate finished")
 
 		return {'FINISHED'}
@@ -135,6 +138,9 @@ class resetBrixelate(bpy.types.Operator):
 			bpy.data.materials.remove(mat)
 		getSettings().show_hide_model = True
 		getSettings().show_hide_lego = True
+
+		ImplementData.sorted_bricks = None
+		ImplementData.print_estimates = None
 
 		end_time = time.time()
 		self.report({"INFO"}, "Reset finished in {:5.3f} seconds".format(end_time - start_time))
@@ -323,6 +329,24 @@ class assemblyInstructions(bpy.types.Operator):
 
 	def execute(self, context):
 		Assembly(context)
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+class dataOutput(bpy.types.Operator):
+	"""Outputs the data"""
+	bl_idname = "mesh.data_output"
+	bl_label = "Data Output"
+
+	@classmethod
+	def poll(self, context):
+		if ImplementData.print_estimates and ImplementData.sorted_bricks:
+			return True
+		#return True
+
+	def execute(self, context):
+		DataOutput()
 		return {"FINISHED"}
 
 	def invoke(self, context, event):

@@ -36,7 +36,13 @@ def csv_header(time_now, **kwargs):
 
 def csv_write(csv_file_name, line_data):
 	output_file = open(csv_file_name, 'a')
-	output_file.write(line_data)
+	if type(line_data) is str:
+		output_file.write(line_data)
+	elif type(line_data) is list:
+		for line in line_data:
+			output_file.write(line)
+	else:
+		raise TypeError
 	output_file.close()
 
 def printProgressBar(iteration, total, prefix='', suffix='', decimals=1, length=100, fill='█'):

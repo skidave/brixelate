@@ -52,8 +52,8 @@ class PanelSettings(bpy.types.PropertyGroup):
 	num_vert_slices = IntProperty(
 		name='Slices',
 		description="Number of vertical slices",
-		default=2,
-		min=1,
+		default=0,
+		min=0,
 		max = 10
 	)
 

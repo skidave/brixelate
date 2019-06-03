@@ -22,8 +22,9 @@ from .operators import (resetBrixelate,
 						#AddSplitPlane,
 						#SplitObjectWithPlane,
 						automatedSplitting,
-						printEstimates,
-						assemblyInstructions
+						#printEstimates,
+						assemblyInstructions,
+						dataOutput
 						)
 from .ui.ui_panel import BrixelPanel
 from .ui.panel_settings import PanelSettings
@@ -43,9 +44,10 @@ classes = (
 	#AddSplitPlane,
 	#SplitObjectWithPlane,
 	automatedSplitting,
-	printEstimates,
+	#printEstimates,
 
 	assemblyInstructions,
+	dataOutput,
 
 	BrixelPanel,
 	PanelSettings)

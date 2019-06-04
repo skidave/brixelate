@@ -1,6 +1,7 @@
 import bpy
 from mathutils import Vector
 import numpy as np
+import math
 
 from brixelate.utils.mesh_utils import add_plane, AutoBoolean
 from .implementData import ImplementData
@@ -15,18 +16,98 @@ class AutoSplit(object):
 	plane_positions = []
 
 	def __init__(self, context):
+
 		self.context = context
 		self.scene = self.context.scene
 
 		self.target_object = bpy.data.objects[ImplementData.object_name]
 		start_point = ImplementData.start_point
 		array = ImplementData.array
-		count = ImplementData.brick_count
+		count = ([int(el) for el in np.unique(array) if el > 0])
 
 		x, y, z = self.target_object.dimensions[0], self.target_object.dimensions[1], self.target_object.dimensions[2]
 		size = x if x > y else y
 
-		self.plane_positions = self.find_plane_positions(start_point, array, count)
+		self.vertical_first(start_point, array, size)
+
+	# self.horizontal_first(start_point, array, count, size)
+
+	def vertical_first(self, start_point, array, size):
+		vert_plane_name = "VertPlane"
+
+		vert_pos = self.find_vert_plane_positions(start_point, size)
+		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
+		if vert_pos:
+			for vp in vert_pos:
+				add_plane(self.context, colour=False, size=size + 1, location=vp, rotation=(90, 0, 0),
+						  name=vert_plane_name)
+
+			objs = self.scene.objects
+			for obj in objs:
+				obj.select = False
+				if obj.name.startswith(vert_plane_name):
+					self.scene.objects.active = obj
+					obj.select = True
+
+			planes_to_use = AutoBoolean('UNION').join_selected_meshes()
+			# split target object with planes
+			self.plane_bool_difference(self.target_object, planes_to_use)
+
+		resultant_objects = [ob for ob in self.scene.objects if ob.name.startswith(self.target_object.name)]
+
+		z, y, x = array.shape
+		startpoint_index = np.array([int(el) for el in [(x - 1) / 2, (y - 1) / 2, (z - 1) / 2]])
+
+		w, d, h = legoData.getDims()
+		lego_dims = [w, d, h]
+
+		for ro in resultant_objects:
+			print(ro.name)
+			plane_name = "~{0}~Plane".format(ro.name)
+			ro.select = True
+
+			vertices = [ro.matrix_world * Vector(corner) for corner in ro.bound_box]
+
+			bot_left = vertices[0]
+			top_right = vertices[6]
+
+			# x,y,z
+			bl_ind = np.array([math.floor(v) for v in np.divide(bot_left - start_point, lego_dims)]) + startpoint_index
+			bl_ind = [i if i > 0 else 0 for i in bl_ind]
+			tr_ind = np.array([math.ceil(v) for v in np.divide(top_right - start_point, lego_dims)]) + startpoint_index
+
+			print(startpoint_index)
+			print("Bottom Left {}".format(bl_ind))
+			print("Top Right {}".format(tr_ind))
+
+			sliced_array = array[bl_ind[2]:tr_ind[2] + 1, bl_ind[1]:tr_ind[1] + 1, bl_ind[0]:tr_ind[0] + 1]
+
+			horz_positions = self.find_plane_positions(start_point, sliced_array)
+			if horz_positions is not None:
+				for p in horz_positions:
+					add_plane(self.context, colour=False, size=size, location=p, name=plane_name)
+
+				objs = bpy.data.objects
+				for obj in objs:
+					obj.select = False
+					if obj.name.startswith(plane_name):
+						self.scene.objects.active = obj
+						obj.select = True
+
+				planes_to_use = AutoBoolean('UNION').join_selected_meshes()
+				# split target object with planes
+				self.plane_bool_difference(ro, planes_to_use)
+
+		self.ops.object.select_all(action='DESELECT')
+		for ob in self.scene.objects:
+			if ob.name.startswith(self.target_object.name):
+				ob.select = True
+				bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
+
+		PrintEstimate(self.context)
+
+	def horizontal_first(self, start_point, array, size):
+		self.plane_positions = self.find_plane_positions(start_point, array)
 
 		ImplementData.horizontal_slices = len(self.plane_positions)
 
@@ -35,11 +116,12 @@ class AutoSplit(object):
 		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
 
 		for p in self.plane_positions:
-			add_plane(context, colour=False, size=size, location=p, name='SplitPlane')
+			add_plane(self.context, colour=False, size=size, location=p, name='SplitPlane')
 
 		if vert_pos:
 			for vp in vert_pos:
-				add_plane(context, colour=False, size=size+1, location=vp,rotation=(90,0,0), name='SplitPlane')
+				add_plane(self.context, colour=False, size=size + 1, location=vp, rotation=(90, 0, 0),
+						  name='SplitPlane')
 
 		# Join all planes together into one object
 		objs = bpy.data.objects
@@ -59,15 +141,16 @@ class AutoSplit(object):
 				ob.select = True
 				bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 
-		PrintEstimate(context)
+		PrintEstimate(self.context)
 
-
-	def find_plane_positions(self, start_point, array, count):
+	def find_plane_positions(self, start_point, array):
 		"""Returns a list of zpositions"""
 		zpositions = []
 		possible_positions = []
 		critical_positions = []
 		w, d, h = legoData.getDims()
+
+		count = ([int(el) for el in np.unique(array) if el > 0])
 
 		midpoint = [int((i - 1) / 2) for i in array.shape]
 		midpointZ = midpoint[0]
@@ -78,7 +161,7 @@ class AutoSplit(object):
 		# print("array size: {}".format(array.shape))
 		# print(midpoint)  # z,y,x
 
-		for id in range(1, count + 1):
+		for id in count:
 			# print('index: ' + str(id))
 			# get indices of brick in array
 			indices = np.argwhere(array == id)
@@ -171,11 +254,12 @@ class AutoSplit(object):
 			if crit not in new_z:
 				new_z.append(crit)
 
-		print(new_z)
 		z_world = [Vector((0, 0, (z - midpointZ) * h)) + start_point + plane_offset for z in new_z]
 		# print(z_world)
-
-		return z_world
+		if z_world:
+			return z_world
+		else:
+			return None
 
 	def find_vert_plane_positions(self, start_point, size):
 
@@ -184,18 +268,15 @@ class AutoSplit(object):
 		if vert_bool:
 			positions = []
 			for i in range(1, vert_count):
-				p = ((vert_count-i)*size)/vert_count - size/2
+				p = ((vert_count - i) * size) / vert_count - size / 2
 				positions.append(p)
 
-
-
-			positions = [Vector((0,p, 0))+start_point for p in positions]
+			positions = [Vector((0, p, 0)) + start_point for p in positions]
 			return positions
 		else:
 			pass
 
 	def plane_bool_difference(self, object, planes):
-
 		self.scene.objects.active = object
 
 		object_split_mod = object.modifiers.new(type="BOOLEAN", name="object_split")

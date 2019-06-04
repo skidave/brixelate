@@ -189,7 +189,7 @@ class SimpleBrixelate(object):
 
 		dimensions = [x_dim, y_dim, z_dim]
 
-		start_point = vertices[0] + (x_vec / 2) + (y_vec / 2) + (z_vec / 2)
+		start_point = vertices[0] + (x_vec / 2) + (y_vec / 2) + (z_vec / 2 - Vector((0,0,h*0.3)))
 
 		x_brick = math.ceil(x_dim / w)
 		y_brick = math.ceil(y_dim / d)

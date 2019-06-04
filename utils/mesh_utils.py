@@ -147,6 +147,10 @@ def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_locati
 	split_plane = context.selected_objects[0]
 	split_plane.name = name
 
+	bm = bmesh_copy_from_object(split_plane, transform=True)
+	bm.faces.ensure_lookup_table()
+	plane_normal = bm.faces[0].normal
+
 	# Solidifies plane to ensure difference operation works
 	bpy.context.scene.objects.active = split_plane
 	solidify = split_plane.modifiers.new(type='SOLIDIFY', name='split_plane_solidify')
@@ -164,6 +168,8 @@ def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_locati
 
 	split_plane.select = True
 	bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
+
+	return location, plane_normal
 
 
 def bmesh_copy_from_object(obj, transform=True, triangulate=True, apply_modifiers=False):

@@ -25,7 +25,7 @@ class Assembly(object):
 		height_dict = {}
 		for ob in objs:
 			ob.select = False
-			if not ob.name.startswith('~COPY~') and not ob.name.startswith('SplitPlane'):
+			if not ob.name.startswith('~COPY~') and re.search(r"Plane", ob.name) is None:
 				height = round(ob.location[2], 1)
 				val = height_dict.get(height, [])
 				val.append(ob.name)

@@ -12,7 +12,7 @@ def showHideModel(self, context):
 		if re.match(r"[BP]_\dx\d", ob.name) is None:
 			ob.hide = not self.show_hide_model
 
-		if ob.name.startswith('~COPY~') or ob.name.startswith('SplitPlane'):
+		if ob.name.startswith('~COPY~') or re.search(r"Plane", ob.name) :
 			ob.hide = True
 	return None
 

@@ -141,15 +141,26 @@ def get_angles(number_points):
 	return phi_s
 
 
-def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_location, rotation=(0,0,0), name="SplitPlane"):
+def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_location, rotation=(0, 0, 0),
+			  name="SplitPlane"):
 	rotation_rad = tuple(np.deg2rad(i) for i in rotation)
 	bpy.ops.mesh.primitive_plane_add(radius=size, location=location, rotation=rotation_rad)
 	split_plane = context.selected_objects[0]
 	split_plane.name = name
 
-	bm = bmesh_copy_from_object(split_plane, transform=True)
+	me = split_plane.data
+	bm = bmesh.new()
+	bm.from_mesh(me)
+
 	bm.faces.ensure_lookup_table()
-	plane_normal = bm.faces[0].normal
+	face = bm.faces[0]
+	plane_normal = face.normal
+
+	bmesh.ops.subdivide_edges(bm, edges=face.edges[:], cuts=6, use_grid_fill=True)
+
+	bm.to_mesh(me)
+	me.update()
+	bm.free()
 
 	# Solidifies plane to ensure difference operation works
 	bpy.context.scene.objects.active = split_plane
@@ -168,6 +179,7 @@ def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_locati
 
 	split_plane.select = True
 	bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
+	split_plane.location = location
 
 	return location, plane_normal
 
@@ -301,6 +313,7 @@ def obj_volume(obj):
 	bmesh.ops.triangulate(bm, faces=bm.faces)
 	return bm.calc_volume()
 
+
 def obj_print_estimate(obj, wall_thickness, infill, wall_speed, infill_speed):
 	"""
 	Estimates how long the object will take to print
@@ -309,8 +322,8 @@ def obj_print_estimate(obj, wall_thickness, infill, wall_speed, infill_speed):
 	sa = obj_surface_area(obj)
 
 	wall_vol = sa * wall_thickness
-	wall_time = wall_vol * (1/wall_speed)
+	wall_time = wall_vol * (1 / wall_speed)
 	infill_vol = (vol - wall_vol) * infill
-	infill_time = infill_vol * (1/infill_speed)
+	infill_time = infill_vol * (1 / infill_speed)
 
 	return sa, vol, wall_time + infill_time

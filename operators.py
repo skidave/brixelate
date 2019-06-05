@@ -111,14 +111,10 @@ class resetBrixelate(bpy.types.Operator):
 	@classmethod
 	def poll(self, context):
 		scene = context.scene
-		count = 0
 		for ob in scene.objects:
-			if re.match(r"~COPY~", ob.name) or re.match(r"[BP]_\dx\d", ob.name):
-				count +=1
-		if count > 1:
-			return True
-		else:
-			return False
+			if re.match(r"~COPY~", ob.name):
+				return True
+
 
 	def execute(self, context):
 		start_time = time.time()
@@ -346,7 +342,8 @@ class dataOutput(bpy.types.Operator):
 		#return True
 
 	def execute(self, context):
-		DataOutput()
+		d = DataOutput()
+		self.report({"INFO"}, "Data saved to {}".format(d.output_file))
 		return {"FINISHED"}
 
 	def invoke(self, context, event):

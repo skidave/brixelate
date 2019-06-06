@@ -2,6 +2,7 @@ import bpy
 import bmesh
 import mathutils
 from mathutils import Vector
+import re
 
 class SurfaceCheck():
 	viable_split = False
@@ -94,24 +95,15 @@ def SurfaceUpdate(context):
 		surface_origin = surface.matrix_world.to_translation()
 
 		for obj in objects:
-			if obj.type == 'MESH' and obj.name != "SplitPlane" and obj.hide == False:
+			if obj.type == 'MESH' and obj.name != "SplitPlane" and re.match(r"[BP]_\dx\d", obj.name) is None and obj.hide == False:
 				obj_origin = obj.matrix_world.to_translation()
 				obj_to_surface = obj_origin - surface_origin
 				object_origins_to_surface[obj.name] = obj_to_surface.length
-
-				#obj.show_bounds = False
-				if obj.data.materials:
-					obj.data.materials[0].diffuse_color = colours.default_colour
-				else:
-					colour = bpy.data.materials.new(name="default_colour")
-					obj.data.materials.append(colour)
-					obj.data.materials[0].diffuse_color = colours.default_colour
 
 		if len(object_origins_to_surface) > 0 and bpy.context.mode == 'OBJECT':
 			nearest_object_name = min(object_origins_to_surface, key=object_origins_to_surface.get)
 			nearest_object = objects[nearest_object_name]
 			#nearest_object.show_bounds = True
-			nearest_object.data.materials[0].diffuse_color = colours.target_colour
 
 			surface_check.nearest_object_name = nearest_object_name
 
@@ -126,15 +118,3 @@ def SurfaceUpdate(context):
 			else:
 				surface_check.viable_split = False
 				surface.data.materials[0].diffuse_color = colours.split_false
-
-
-	elif not surface_present:
-		for obj in objects:
-			if obj.type == 'MESH':
-				#obj.show_bounds = False
-				if obj.data.materials:
-					obj.data.materials[0].diffuse_color = colours.default_colour
-				else:
-					colour = bpy.data.materials.new(name="default_colour")
-					obj.data.materials.append(colour)
-					obj.data.materials[0].diffuse_color = colours.default_colour

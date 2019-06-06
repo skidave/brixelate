@@ -46,31 +46,27 @@ class BrixelateImplementation(object):
 			if ob.name.startswith('temp'):
 				ob.select = True
 			if ob.name.startswith('Brick '):
-				ob.hide=True
+				ob.hide = True
 
-		self.scene.objects.active = self.scene.objects['temp '+name]
+		self.scene.objects.active = self.scene.objects['temp ' + name]
 		bpy.ops.object.join()
 		bpy.ops.object.mode_set(mode='EDIT')
-		bpy.ops.mesh.select_mode(type="EDGE")
-		# remove doubles
-		mesh.remove_doubles(threshold=0.0001)
-		# select interior faces
+
 		mesh.select_all(action='DESELECT')
-		mesh.select_interior_faces()
-		mesh.delete(type='FACE')
-		# fix holes
-		mesh.select_non_manifold()
-		mesh.edge_face_add()
-		# cleanup
-		mesh.select_all(action="SELECT")
-		mesh.dissolve_limited()
-		# print("Object Mode")
+		bpy.ops.mesh.select_mode(type="VERT")
+		mesh.select_loose()
+		mesh.delete(type='VERT')
+
+		bpy.ops.mesh.select_mode(type="EDGE")
+		mesh.select_all(action='SELECT')
+		# remove doubles
+		mesh.remove_doubles(threshold=0.1)
+
 		bpy.ops.object.mode_set(mode='OBJECT')
 
 		for ob in self.scene.objects:
 			ob.select = False
 			if ob.name.startswith('HOLE') or ob.name.startswith('temp'):
-				convert_to_tris(ob)
 				ob.select = True
 
 		joined_bricks = AutoBoolean('UNION').join_selected_meshes()
@@ -82,20 +78,27 @@ class BrixelateImplementation(object):
 				ob.select = True
 		assert len(self.context.selected_objects) == 1
 		AutoBoolean('DIFFERENCE').join_selected_meshes()
-
+		#
 		for ob in self.scene.objects:
 			ob.select = False
-			if ob.name.startswith('STUD') or ob.name == name:
-				convert_to_tris(ob)
+			if ob.name.startswith('STUD'):
+				self.scene.objects.active = ob
 				ob.select = True
 
+		bpy.ops.object.join()
+
+		self.scene.objects.active = main_obj
+		for ob in self.scene.objects:
+			ob.select = False
+			if ob.name.startswith('STUD'):
+				ob.select = True
 		brixelated = AutoBoolean('UNION').join_selected_meshes()
 
 		self.ops.object.select_all(action='DESELECT')
 		main_obj.select = True
 
 	def add_temp_bricks(self, array, start_point, name):
-		z_array, y_array, x_array = array.shape[0], array.shape[1], array.shape[2]
+		z_array, y_array, x_array = array.shape[:]
 		x_offset = (x_array - 1) / 2
 		y_offset = (y_array - 1) / 2
 		z_offset = (z_array - 1) / 2
@@ -107,11 +110,21 @@ class BrixelateImplementation(object):
 				for x in range(x_array):
 					point = Vector(((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
 					if array[z, y, x] > 0:
-						legoData().simple_add_brick_at_point(point, name)
-						if array[z + 1, y, x] <= 0:
-							self.add_hole(point)
-						if array[z - 1, y, x] <= 0:
-							self.add_stud(point)
+						surrounds = [array[z - 1, y, x],  # bottom
+									 array[z + 1, y, x],  # top
+									 array[z, y, x - 1],  # left
+									 array[z, y + 1, x],  # back
+									 array[z, y, x + 1],  # right
+									 array[z, y - 1, x],  # front
+									 ]
+
+						if min(surrounds) < 1:
+							faces = [True if i < 1 else False for i in surrounds]
+							legoData().simple_add_brick_at_point(point, name, faces)
+							if array[z + 1, y, x] <= 0:
+								self.add_hole(point)
+							if array[z - 1, y, x] <= 0:
+								self.add_stud(point)
 
 	def add_stud(self, location):
 

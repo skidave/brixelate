@@ -156,7 +156,7 @@ def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_locati
 	face = bm.faces[0]
 	plane_normal = face.normal
 
-	bmesh.ops.subdivide_edges(bm, edges=face.edges[:], cuts=6, use_grid_fill=True)
+	bmesh.ops.subdivide_edges(bm, edges=face.edges[:], cuts=12, use_grid_fill=True)
 
 	bm.to_mesh(me)
 	me.update()
@@ -238,7 +238,7 @@ class AutoBoolean(object):
 			self.boolean_mod(obj, ob, self.mode)
 		obj.select = True
 
-		convert_to_tris(obj)
+		#convert_to_tris(obj)
 
 		return obj
 

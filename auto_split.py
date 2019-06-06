@@ -22,6 +22,7 @@ class AutoSplit(object):
 
 		self.target_object = bpy.data.objects[ImplementData.object_name]
 		start_point = ImplementData.start_point
+		print(start_point)
 		array = ImplementData.array
 		count = ([int(el) for el in np.unique(array) if el > 0])
 
@@ -44,7 +45,7 @@ class AutoSplit(object):
 		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
 		if vert_pos:
 			for vp in vert_pos:
-				add_plane(self.context, colour=False, size=size, location=vp, rotation=rotation,
+				add_plane(self.context, colour=False, size=size/2, location=vp, rotation=rotation,
 						  name=vert_plane_name)
 
 			objs = self.scene.objects
@@ -180,7 +181,7 @@ class AutoSplit(object):
 		plane_offset = Vector((0, 0, 1.0))
 		# print(start_point)  # x,y,z
 
-		# print("array size: {}".format(array.shape))
+		#print("array size: {}".format(array.shape))
 		# print(midpoint)  # z,y,x
 
 		for id in count:
@@ -212,10 +213,9 @@ class AutoSplit(object):
 				y = int(ind[0])
 				x = int(ind[1])
 
-				#TODO add try except here
 				above = array[top + 1][y][x]
 				below = array[bottom - 1][y][x]
-				# print("above: {}, below: {}".format(above, below))
+				#print("above: {}, below: {}".format(above, below))
 				if below <= 0 or above <= 0:
 					covered_count += 1
 
@@ -287,22 +287,25 @@ class AutoSplit(object):
 	def find_vert_plane_positions(self, start_point, major_dim, major_dir):
 
 		vert_bool = getSettings().vert
-		vert_count = getSettings().num_vert_slices + 1
+		piece_count = getSettings().num_vert_slices + 1
 		if vert_bool:
 			positions = []
-			for i in range(1, vert_count):
-				p = ((vert_count - i) * major_dim) / vert_count - major_dim / 2
+			for i in range(1, piece_count):
+				p = ((i * major_dim) / piece_count) - major_dim / 2
 				positions.append(p)
 
 			vec_tup = [(0,p,0) if major_dir=="Y" else (p,0,0) for p in positions]
 
 			positions = [Vector(vec) + start_point for vec in vec_tup]
+			#positions = [Vector(vec) for vec in vec_tup]
 			return positions
 		else:
 			pass
 
 	def plane_bool_difference(self, object, planes):
 		self.scene.objects.active = object
+
+		mesh = self.ops.mesh
 
 		convert_to_tris(object)
 
@@ -313,7 +316,12 @@ class AutoSplit(object):
 
 		# Separate by loose parts
 		self.ops.object.mode_set(mode='EDIT')
-		self.ops.mesh.select_all(action='SELECT')
-		self.ops.mesh.separate(type='LOOSE')
+
+		mesh.select_all(action='DESELECT')
+		mesh.select_loose()
+		mesh.delete(type='VERT')
+
+		mesh.select_all(action='SELECT')
+		mesh.separate(type='LOOSE')
 		self.ops.object.mode_set(mode='OBJECT')
 		planes.hide = True

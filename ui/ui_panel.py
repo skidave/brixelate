@@ -105,7 +105,7 @@ class BrixelPanel(bpy.types.Panel):
 		row.prop(settings, 'num_vert_slices', icon="GRID")
 		row = box.row()
 		row.operator("mesh.auto_split_object", text="Naive", icon="MOD_BEVEL")
-		#box = topbox.box()
+		# box = topbox.box()
 		# box.label('Manual', icon="BORDER_RECT")
 		# row = box.row()
 		# row.operator("mesh.add_split_plane", text="Add Plane", icon="MESH_PLANE")

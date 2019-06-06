@@ -1,5 +1,6 @@
 import os
 import datetime
+import re
 
 import bpy
 
@@ -17,16 +18,16 @@ class DataOutput(object):
 		except FileExistsError:
 			pass
 
-		self.output_file = self.file_name()
 
 		data = self.main_data()
+		self.output_file = self.file_name()
 
 		csv_write(self.output_file, data)
 
 	def file_name(self):
 		ob_name = ImplementData.object_name
 		now_string = '{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
-		csv_file_name = "{0}_{1}.csv".format(ob_name, now_string)
+		csv_file_name = "{0}_{1}_V{2}_{3}.csv".format(ob_name, self.brick_type, self.vert, now_string)
 
 		return os.path.join(self.OUTPUT_DIR, csv_file_name)
 
@@ -40,12 +41,16 @@ class DataOutput(object):
 		part_count = len(part_data)
 		horz = ImplementData.horizontal_slices
 		vert = ImplementData.vertical_slices
+		plates = True if re.search("Plate", ",".join([b[0] for b in brick_data])) is not None else False
+
+		self.vert = vert
+		self.brick_type = "Plates" if plates else "Bricks"
 
 		data_to_write = []
 
-		header = "Object Name,Surface Area,Volume,Brick Count,Part Count,Hor Slices,Vert Slices\n"
+		header = "Object Name,Surface Area,Volume,Brick Count,Plates,Part Count,Hor Slices,Vert Slices\n"
 		data_to_write.append(header)
-		header_data_list = [str(el) for el in [ob_name, ob_sa, ob_vol, brick_count, part_count,horz,vert]]
+		header_data_list = [str(el) for el in [ob_name, ob_sa, ob_vol, brick_count, plates, part_count,horz,vert]]
 		header_data = ','.join(header_data_list) + '\n'
 		data_to_write.append(header_data)
 

@@ -57,10 +57,10 @@ def register():
 	for c in classes:
 		register_class(c)
 
-	#bpy.app.handlers.scene_update_post.clear()  # for testing
-	#bpy.app.handlers.scene_update_post.append(SurfaceUpdate)
-	#bpy.types.Scene.surface_check = SurfaceCheck()
-	#bpy.types.Scene.colours = Colours()
+	# bpy.app.handlers.scene_update_post.clear()  # for testing
+	# bpy.app.handlers.scene_update_post.append(SurfaceUpdate)
+	# bpy.types.Scene.surface_check = SurfaceCheck()
+	# bpy.types.Scene.colours = Colours()
 
 	bpy.types.Scene.my_settings = bpy.props.PointerProperty(type=PanelSettings)
 
@@ -71,8 +71,8 @@ def unregister():
 		unregister_class(c)
 
 	del bpy.types.Scene.my_settings
-	#del bpy.types.Scene.surface_check
-	#del bpy.types.Scene.colours
+	# del bpy.types.Scene.surface_check
+	# del bpy.types.Scene.colours
 
 
 if __name__ == "__main__":

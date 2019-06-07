@@ -125,42 +125,6 @@ class BrixelPanel(bpy.types.Panel):
 		row.prop(settings, "assembly_level")
 		# row = topbox.row()
 		# row.operator("mesh.print_estimate", text="Print Estimate", icon="MESH_PLANE")
-		topbox.separator()
-		toprow = topbox.row()
-
-		col = toprow.column()
-		col.label(text="LEGO", icon="GROUP_VERTEX")
-
-		col.separator()
-		innerbox = col.box()
-		row = innerbox.row()
-		if ImplementData.brick_count > 1:
-
-			if ImplementData.sorted_bricks is not None:
-				col = row.column()
-				for el in ImplementData.sorted_bricks:
-					string = "{0}:    {1}".format(el[0], el[1])
-					col.label(string)
-				col.label("Total:    {}".format(ImplementData.brick_count))
-		else:
-			col = row.column()
-			col.label('No Data')
-
-		col = toprow.column()
-		col.label(text="3D Print", icon="MESH_PLANE")
-		col.separator()
-		innerbox = col.box()
-		row = innerbox.row()
-		if ImplementData.print_estimates is not None:
-				col = row.column()
-				print_est = ImplementData.print_estimates
-				for el in print_est:
-					string = "{0}:    {1:.1f}".format(el, print_est[el]['print'])
-					col.label(string)
-				col.label("Total:    {:.1f}".format(ImplementData.total_print_time))
-		else:
-			col = row.column()
-			col.label('No Data')
 
 		toprow = topbox.row()
 		toprow.operator("mesh.data_output", text="Output Data", icon="FCURVE")
@@ -183,6 +147,48 @@ class BrixelPanel(bpy.types.Panel):
 
 		layout.separator()
 		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
+
+		layout.separator()
+		topbox = layout.box()
+
+		toprow = topbox.row()
+
+		col = toprow.column()
+		col.label(text="LEGO", icon="GROUP_VERTEX")
+
+		col.separator()
+		innerbox = col.box()
+		row = innerbox.row()
+		if ImplementData.brick_count > 0:
+
+			if ImplementData.sorted_bricks is not None:
+				col = row.column()
+				col.label("Total:    {}".format(ImplementData.brick_count))
+				for el in ImplementData.sorted_bricks:
+					string = "{0}:    {1}".format(el[0], el[1])
+					col.label(string)
+
+		else:
+			col = row.column()
+			col.label('No Data')
+
+		col = toprow.column()
+		col.label(text="3D Print", icon="MESH_PLANE")
+		col.separator()
+		innerbox = col.box()
+		row = innerbox.row()
+		if ImplementData.print_estimates is not None:
+				col = row.column()
+				col.label("Total:    {:.1f}".format(ImplementData.total_print_time))
+				print_est = ImplementData.print_estimates
+
+				for el in print_est:
+					string = "{0}:    {1:.1f}".format(el, print_est[el]['print'])
+					col.label(string)
+
+		else:
+			col = row.column()
+			col.label('No Data')
 
 		# layout.separator()
 		# box = layout.box()

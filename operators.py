@@ -251,26 +251,26 @@ class AddSplitPlane(bpy.types.Operator):
 		return self.execute(context)
 
 
-# class SplitObjectWithPlane(bpy.types.Operator):
-# 	"""Splits object with plane"""
-# 	bl_idname = "mesh.split_object"
-# 	bl_label = "Split Object"
-# 	bl_options = {"UNDO"}
-#
-# 	@classmethod
-# 	def poll(self, context):
-# 		objects = bpy.data.objects
-# 		viable_split = bpy.types.Scene.surface_check.viable_split
-# 		split_plane_present = 'SplitPlane' in objects
-# 		object_to_split_present = len(objects) > 1
-# 		return split_plane_present and object_to_split_present and viable_split
-#
-# 	def execute(self, context):
-# 		Split(context)
-# 		return {"FINISHED"}
-#
-# 	def invoke(self, context, event):
-# 		return self.execute(context)
+class SplitObjectWithPlane(bpy.types.Operator):
+	"""Splits object with plane"""
+	bl_idname = "mesh.split_object"
+	bl_label = "Split Object"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		objects = bpy.data.objects
+		viable_split = bpy.types.Scene.surface_check.viable_split
+		split_plane_present = 'SplitPlane' in objects
+		object_to_split_present = len(objects) > 1
+		return split_plane_present and object_to_split_present and viable_split
+
+	def execute(self, context):
+		Split(context)
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
 
 
 class automatedSplitting(bpy.types.Operator):

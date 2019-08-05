@@ -4,6 +4,8 @@ import mathutils
 from mathutils import Vector
 import re
 
+from .utils.colours import Colours
+
 class SurfaceCheck():
 	viable_split = False
 
@@ -80,7 +82,7 @@ class SurfaceCheck():
 def SurfaceUpdate(context):
 	objects = bpy.data.objects
 	surface_check = bpy.types.Scene.surface_check
-	colours = bpy.types.Scene.colours
+	colours = Colours
 
 	object_origins_to_surface = {}
 
@@ -95,15 +97,17 @@ def SurfaceUpdate(context):
 		surface_origin = surface.matrix_world.to_translation()
 
 		for obj in objects:
+			obj.show_bounds = False
 			if obj.type == 'MESH' and obj.name != "SplitPlane" and re.match(r"[BP]_\dx\d", obj.name) is None and obj.hide == False:
 				obj_origin = obj.matrix_world.to_translation()
 				obj_to_surface = obj_origin - surface_origin
 				object_origins_to_surface[obj.name] = obj_to_surface.length
 
+
 		if len(object_origins_to_surface) > 0 and bpy.context.mode == 'OBJECT':
 			nearest_object_name = min(object_origins_to_surface, key=object_origins_to_surface.get)
 			nearest_object = objects[nearest_object_name]
-			#nearest_object.show_bounds = True
+			nearest_object.show_bounds = True
 
 			surface_check.nearest_object_name = nearest_object_name
 

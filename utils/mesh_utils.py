@@ -2,7 +2,7 @@ import bpy
 import bmesh
 from mathutils import Vector
 import numpy as np
-
+from .colours import Colours
 
 def homeObject(obj):
 	obj.select = True
@@ -172,7 +172,7 @@ def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_locati
 	split_plane.lock_scale = [False, False, True]  # locks scaling in z (thickness) axis
 
 	if colour:
-		colours = bpy.types.Scene.colours  # loads colours from separate class
+		colours = Colours  # loads colours from separate class
 		colour = bpy.data.materials.new(name="default_colour")
 		split_plane.data.materials.append(colour)
 		split_plane.data.materials[0].diffuse_color = colours.default_colour

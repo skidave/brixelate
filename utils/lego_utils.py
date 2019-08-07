@@ -87,10 +87,10 @@ class legoData():
 		return w, d, h
 
 	# function to create a brick with width, depth and height at a point
-	def addNewBrickAtPoint(self, point, width, depth, height, studs=True, colour=True):
+	def addNewBrickAtPoint(self, point, width, depth, height, name, studs=True, colour=True):
 		_w, _d, _h = self.getDims()
 
-		new_brick_name = self.brickName([width, depth, height])
+		new_brick_name = self.brickName([width, depth, height]) + '.' + name
 
 		offset = 0.00
 		# offset = random.uniform(0.05, 0.2)
@@ -183,12 +183,11 @@ class legoData():
 				(3, 7, 4, 0),  # front
 			]
 
-
 		if input_faces is not None:
 			face_idx = [i for i, x in enumerate(input_faces) if x]
 			Faces = [Faces[i] for i in face_idx]
-			# vert_idx = set(list(sum(Faces, ())))
-			# Vertices = [Vertices[i] for i in vert_idx]
+		# vert_idx = set(list(sum(Faces, ())))
+		# Vertices = [Vertices[i] for i in vert_idx]
 
 		name_string = "temp " + name
 

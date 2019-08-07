@@ -1,7 +1,6 @@
 import bpy
 from mathutils import Vector
 import numpy as np
-import math
 
 from brixelate.utils.mesh_utils import add_plane, AutoBoolean, convert_to_tris
 from .implementData import ImplementData
@@ -21,8 +20,7 @@ class AutoSplit(object):
 		self.scene = self.context.scene
 
 		self.target_object = bpy.data.objects[ImplementData.object_name]
-		start_point = self.target_object.location
-		#print(start_point)
+		start_point = ImplementData.start_point
 		array = ImplementData.array
 		count = ([int(el) for el in np.unique(array) if el > 0])
 
@@ -41,7 +39,7 @@ class AutoSplit(object):
 		rotation = (90, 0, 90) if x > y else (90, 0, 0)
 		major_dir = "X" if x > y else "Y"
 
-		vert_pos = self.find_vert_plane_positions(start_point, size, major_dir)
+		vert_pos = self.find_vert_plane_positions(self.target_object.location, size, major_dir)
 		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
 		if vert_pos:
 			for vp in vert_pos:
@@ -62,8 +60,7 @@ class AutoSplit(object):
 		resultant_objects = [ob for ob in self.scene.objects if ob.name.startswith(self.target_object.name)]
 
 		z, y, x = array.shape
-		startpoint_index = np.array([int(el) for el in [(x - 1) / 2, (y - 1) / 2, (z - 1) / 2]])
-		print(startpoint_index)
+		startpoint_index = [0, 0, 0]  # np.array([int(el) for el in [(x - 1) / 2, (y - 1) / 2, (z - 1) / 2]])
 
 		w, d, h = legoData.getDims()
 		lego_dims = [w, d, h]
@@ -71,7 +68,7 @@ class AutoSplit(object):
 		horz_slices = 0
 
 		for ro in resultant_objects:
-			# print(ro.name)
+			#print(ro.name)
 			plane_name = "~{0}~Plane".format(ro.name)
 			ro.select = True
 			bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
@@ -80,12 +77,13 @@ class AutoSplit(object):
 
 			bot_left = vertices[0]
 			top_right = vertices[6]
+			mid = (top_right - bot_left) / 2 + bot_left
 
 			# x,y,z
-			#bl_ind = np.array([math.floor(v) for v in np.divide(bot_left - start_point, lego_dims)]) + startpoint_index
+			# bl_ind = np.array([math.floor(v) for v in np.divide(bot_left - start_point, lego_dims)]) + startpoint_index
 			bl_ind = np.array([int(round(v)) for v in np.divide(bot_left - start_point, lego_dims)]) + startpoint_index
 			bl_ind = [i if i > 0 else 0 for i in bl_ind]
-			#tr_ind = np.array([math.ceil(v) for v in np.divide(top_right - start_point, lego_dims)]) + startpoint_index
+			# tr_ind = np.array([math.ceil(v) for v in np.divide(top_right - start_point, lego_dims)]) + startpoint_index
 			tr_ind = np.array([int(round(v)) for v in np.divide(top_right - start_point, lego_dims)]) + startpoint_index
 
 			# print(startpoint_index)
@@ -94,7 +92,8 @@ class AutoSplit(object):
 
 			sliced_array = array[bl_ind[2]:tr_ind[2] + 1, bl_ind[1]:tr_ind[1] + 1, bl_ind[0]:tr_ind[0] + 1]
 
-			horz_positions = self.find_plane_positions(start_point, sliced_array)
+			horz_positions = self.find_plane_positions(sliced_array, bl_ind[2], mid)
+
 			if horz_positions is not None:
 				horz_slices += len(horz_positions)
 
@@ -167,7 +166,7 @@ class AutoSplit(object):
 
 		PrintEstimate(self.context)
 
-	def find_plane_positions(self, start_point, array):
+	def find_plane_positions(self, array, bottom_index, obj_mid):
 		"""Returns a list of zpositions"""
 		zpositions = []
 		possible_positions = []
@@ -176,15 +175,12 @@ class AutoSplit(object):
 
 		count = ([int(el) for el in np.unique(array) if el > 0])
 
-		midpoint = [int(i / 2) for i in array.shape]
-		midpointZ = midpoint[0]
-
-
-		plane_offset = Vector((0, 0, 1.0))
+		plane_offset = Vector((0, 0, 0))
 		# print(start_point)  # x,y,z
 
-		#print("array size: {}".format(array.shape))
+		# print("array size: {}".format(array.shape))
 		# print(midpoint)  # z,y,x
+		# print(array)
 
 		for id in count:
 			# print('index: ' + str(id))
@@ -219,9 +215,9 @@ class AutoSplit(object):
 
 				above = array[top + 1][y][x]
 				below = array[bottom - 1][y][x]
-				#print("above: {}, below: {}".format(above, below))
+				# print("above: {}, below: {}".format(above, below))
 				if below <= 0:
-					below_count+=1
+					below_count += 1
 					covered_count += 1
 				if above <= 0:
 					above_count += 1
@@ -240,7 +236,6 @@ class AutoSplit(object):
 		possible_positions = [list(x) for x in set(tuple(x) for x in possible_positions)]
 
 		zpositions = list(set(zpositions))
-
 		# print(zpositions)
 
 		overlap = {}
@@ -284,10 +279,9 @@ class AutoSplit(object):
 		# for crit in critical_positions:
 		# 	if crit[1] not in new_z:
 		# 		new_z.append(crit[1])
-
 		# print(new_z)
-		z_world = [Vector((0, 0, (z - midpointZ) * h)) + start_point + plane_offset for z in new_z]
-		#z_world = [Vector((0, 0, (z - midpointZ) * h))  + plane_offset for z in new_z]
+		z_full_array = [z + bottom_index for z in new_z]
+		z_world = [Vector((0, 0, z * h)) + Vector((obj_mid[0], obj_mid[1], 0)) + plane_offset for z in z_full_array]
 		# print(z_world)
 		if z_world:
 			return z_world
@@ -304,10 +298,10 @@ class AutoSplit(object):
 				p = ((i * major_dim) / piece_count) - major_dim / 2
 				positions.append(p)
 
-			vec_tup = [(0,p,0) if major_dir=="Y" else (p,0,0) for p in positions]
+			vec_tup = [(0, p, 0) if major_dir == "Y" else (p, 0, 0) for p in positions]
 
 			positions = [Vector(vec) + start_point for vec in vec_tup]
-			#positions = [Vector(vec) for vec in vec_tup]
+			# positions = [Vector(vec) for vec in vec_tup]
 			return positions
 		else:
 			pass

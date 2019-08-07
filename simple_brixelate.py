@@ -56,8 +56,13 @@ class SimpleBrixelate(object):
 		for p in [wd_offset, wdh_offset, w_offset, wh_offset, d_offset, dh_offset]:
 			start_points.append(p)
 
+		# This is for the see sense iterations only - will be removed.
+		custom_start = origin_start_point + Vector((-2.753, -2.753, 0))
+		start_points = [custom_start]
+
 		if iterations_start_point and ImplementData.start_point is not None:
 			start_points = [ImplementData.start_point]
+
 
 		target_object.select = False
 
@@ -306,7 +311,7 @@ class SimpleBrixelate(object):
 										(x * w, y * d, z * h)) + start_point
 									translation += Vector((x_pos, y_pos, z_pos))
 									if kwargs.get('add_bricks', False):
-										addNewBrickAtPoint(translation, width, depth, height, studs=True, colour=True)
+										addNewBrickAtPoint(translation, width, depth, height, str(brick_num), studs=True, colour=True)
 									brick_num += 1
 									volume_count += width * depth * height
 		lego_volume = volume_count * w * d * h

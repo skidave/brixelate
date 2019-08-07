@@ -46,14 +46,18 @@ class SimpleBrixelate(object):
 		zbricks = int(math.ceil(xyz_bricks[2] / 2))
 
 		w, d, h = brick_size
-
+		start_points = [origin_start_point]
 		wd_offset = origin_start_point + Vector((w / 2, d / 2, 0))
 		wdh_offset = origin_start_point + Vector((w / 2, d / 2, h / 2))
 		w_offset = origin_start_point + Vector((w / 2, 0, 0))
 		wh_offset = origin_start_point + Vector((w / 2, 0, h / 2))
 		d_offset = origin_start_point + Vector((0, d / 2, 0))
 		dh_offset = origin_start_point + Vector((0, d / 2, h / 2))
-		start_points = [origin_start_point, wd_offset, wdh_offset, w_offset, wh_offset, d_offset, dh_offset]
+		for p in [wd_offset, wdh_offset, w_offset, wh_offset, d_offset, dh_offset]:
+			start_points.append(p)
+
+		if iterations_start_point and ImplementData.start_point is not None:
+			start_points = [ImplementData.start_point]
 
 		target_object.select = False
 

@@ -7,7 +7,7 @@ from mathutils import Vector
 
 from brixelate.utils.lego_utils import legoData
 from .implementData import ImplementData
-from brixelate.utils.mesh_utils import AutoBoolean, convert_to_tris
+from brixelate.utils.mesh_utils import AutoBoolean
 
 
 class BrixelateImplementation(object):
@@ -99,16 +99,13 @@ class BrixelateImplementation(object):
 
 	def add_temp_bricks(self, array, start_point, name):
 		z_array, y_array, x_array = array.shape[:]
-		x_offset = (x_array - 1) / 2
-		y_offset = (y_array - 1) / 2
-		z_offset = (z_array - 1) / 2
 
 		w, d, h = legoData().getDims()
 
 		for z in range(z_array):
 			for y in range(y_array):
 				for x in range(x_array):
-					point = Vector(((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
+					point = Vector((x * w, y * d, z * h)) + start_point
 					if array[z, y, x] > 0:
 						surrounds = [array[z - 1, y, x],  # bottom
 									 array[z + 1, y, x],  # top

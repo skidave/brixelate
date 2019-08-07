@@ -87,7 +87,7 @@ class legoData():
 		return w, d, h
 
 	# function to create a brick with width, depth and height at a point
-	def addNewBrickAtPoint(self, point, width, depth, height, number, name, studs=True, colour=True):
+	def addNewBrickAtPoint(self, point, width, depth, height, studs=True, colour=True):
 		_w, _d, _h = self.getDims()
 
 		new_brick_name = self.brickName([width, depth, height])

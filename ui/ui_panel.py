@@ -88,6 +88,7 @@ class BrixelPanel(bpy.types.Panel):
 							 icon="FILE_TICK" if settings.bricks2[i] else "RADIOBUT_OFF", toggle=True)
 
 		row = box.row()
+		row.prop(settings, "iterations")
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
 
 		# layout.separator()

@@ -2,8 +2,8 @@ import time
 import copy
 import re
 from operator import itemgetter
-
 import math
+
 import bpy
 import bmesh
 from mathutils import Vector
@@ -31,6 +31,7 @@ class SimpleBrixelate(object):
 	def brixelate(self, target_object, **kwargs):
 
 		use_shell_as_bounds = True  # getSettings().use_shell_as_bounds
+		iterations_start_point = getSettings().iterations
 		bricks_to_use = legoData().listOfBricksToUse()
 
 		if 'ratio' in kwargs:
@@ -39,20 +40,20 @@ class SimpleBrixelate(object):
 		else:
 			brick_size = legoData.getDims()
 
-		xyz_bricks, centre_start_point, dimensions = self.brickBounds(self.scene, target_object, brick_size)
+		xyz_bricks, origin_start_point, dimensions = self.brickBounds(self.scene, target_object, brick_size)
 		xbricks = int(math.ceil(xyz_bricks[0] / 2))
 		ybricks = int(math.ceil(xyz_bricks[1] / 2))
 		zbricks = int(math.ceil(xyz_bricks[2] / 2))
 
 		w, d, h = brick_size
 
-		wd_offset = centre_start_point + Vector((w / 2, d / 2, 0))
-		wdh_offset = centre_start_point + Vector((w / 2, d / 2, h / 2))
-		w_offset = centre_start_point + Vector((w / 2, 0, 0))
-		wh_offset = centre_start_point + Vector((w / 2, 0, h / 2))
-		d_offset = centre_start_point + Vector((0, d / 2, 0))
-		dh_offset = centre_start_point + Vector((0, d / 2, h / 2))
-		start_points = [centre_start_point, wd_offset, wdh_offset, w_offset, wh_offset, d_offset, dh_offset]
+		wd_offset = origin_start_point + Vector((w / 2, d / 2, 0))
+		wdh_offset = origin_start_point + Vector((w / 2, d / 2, h / 2))
+		w_offset = origin_start_point + Vector((w / 2, 0, 0))
+		wh_offset = origin_start_point + Vector((w / 2, 0, h / 2))
+		d_offset = origin_start_point + Vector((0, d / 2, 0))
+		dh_offset = origin_start_point + Vector((0, d / 2, h / 2))
+		start_points = [origin_start_point, wd_offset, wdh_offset, w_offset, wh_offset, d_offset, dh_offset]
 
 		target_object.select = False
 
@@ -65,10 +66,12 @@ class SimpleBrixelate(object):
 			add = 1
 			bricks_array = np.zeros((zbricks * 2 + add, ybricks * 2 + add, xbricks * 2 + add))
 
-			for x in range(-xbricks, xbricks + add):
-				for y in range(-ybricks, ybricks + add):
-					for z in range(-zbricks, zbricks + add):
+			for x in range(xbricks * 2 + add):
+				for y in range(ybricks * 2 + add):
+					for z in range(zbricks * 2 + add):
 						translation = Vector((x * w, y * d, z * h)) + start_point
+						# legoData().addNewBrickAtPoint(translation, 1, 1, 1)
+
 						vertices, centre = getVertices(translation, w, d, h)
 						edges = getEdges(vertices)
 
@@ -77,10 +80,12 @@ class SimpleBrixelate(object):
 						# Brick Array assignment
 						if use_shell_as_bounds:
 							if centreIntersect and sum(edgeIntersects) == 0:
-								bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
+								bricks_array[z, y, x] = 1
+						# legoData().addNewBrickAtPoint(translation, 1, 1, 1)
+
 						else:
 							if centreIntersect or sum(edgeIntersects) > 0:
-								bricks_array[z + zbricks, y + ybricks, x + xbricks] = 1
+								bricks_array[z, y, x] = 1
 
 			temp_dict[i] = {'start_point': start_point, 'count': int(np.sum(bricks_array)),
 							'array': bricks_array}
@@ -189,7 +194,7 @@ class SimpleBrixelate(object):
 
 		dimensions = [x_dim, y_dim, z_dim]
 
-		start_point = vertices[0] + (x_vec / 2) + (y_vec / 2) + (z_vec / 2 - Vector((0,0,h*0.3)))
+		start_point = vertices[0] + Vector((0, 0, -h * 0.3))
 
 		x_brick = math.ceil(x_dim / w)
 		y_brick = math.ceil(y_dim / d)
@@ -228,9 +233,6 @@ class SimpleBrixelate(object):
 		addNewBrickAtPoint = legoData().addNewBrickAtPoint
 
 		z_array, y_array, x_array = bricks.shape[0], bricks.shape[1], bricks.shape[2]
-		x_offset = (x_array - 1) / 2
-		y_offset = (y_array - 1) / 2
-		z_offset = (z_array - 1) / 2
 
 		brick_num = 1
 		volume_count = 0
@@ -297,11 +299,10 @@ class SimpleBrixelate(object):
 									z_pos = ((height - 1) / 2) * h
 
 									translation = Vector(
-										((x - x_offset) * w, (y - y_offset) * d, (z - z_offset) * h)) + start_point
+										(x * w, y * d, z * h)) + start_point
 									translation += Vector((x_pos, y_pos, z_pos))
 									if kwargs.get('add_bricks', False):
-										addNewBrickAtPoint(translation, width, depth, height, brick_num, brick_name,
-														   studs=True, colour=True)
+										addNewBrickAtPoint(translation, width, depth, height, studs=True, colour=True)
 									brick_num += 1
 									volume_count += width * depth * height
 		lego_volume = volume_count * w * d * h

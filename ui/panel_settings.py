@@ -33,6 +33,12 @@ class PanelSettings(bpy.types.PropertyGroup):
 		update=showHideLEGO
 	)
 
+	iterations = BoolProperty(
+		name="Iterations",
+		description="Tick if planning on creating iterations",
+		default=False,
+	)
+
 	brick_selection = BoolProperty(name="Expand Brick Selection", default=False)
 
 	experimentation = BoolProperty(name="Expand Experiments", default=False)

@@ -21,7 +21,7 @@ class AutoSplit(object):
 		self.scene = self.context.scene
 
 		self.target_object = bpy.data.objects[ImplementData.object_name]
-		start_point = ImplementData.start_point
+		start_point = self.target_object.location
 		#print(start_point)
 		array = ImplementData.array
 		count = ([int(el) for el in np.unique(array) if el > 0])
@@ -45,7 +45,7 @@ class AutoSplit(object):
 		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
 		if vert_pos:
 			for vp in vert_pos:
-				add_plane(self.context, colour=False, size=size/2, location=vp, rotation=rotation,
+				add_plane(self.context, colour=False, size=size, location=vp, rotation=rotation,
 						  name=vert_plane_name)
 
 			objs = self.scene.objects
@@ -63,6 +63,7 @@ class AutoSplit(object):
 
 		z, y, x = array.shape
 		startpoint_index = np.array([int(el) for el in [(x - 1) / 2, (y - 1) / 2, (z - 1) / 2]])
+		print(startpoint_index)
 
 		w, d, h = legoData.getDims()
 		lego_dims = [w, d, h]

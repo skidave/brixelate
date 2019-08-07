@@ -1,12 +1,12 @@
 import bpy
+from brixelate.utils.lego_utils import legoData
+from brixelate.utils.mesh_utils import add_plane, AutoBoolean, convert_to_tris
 from mathutils import Vector
 import numpy as np
 
-from brixelate.utils.mesh_utils import add_plane, AutoBoolean, convert_to_tris
 from .implementData import ImplementData
-from brixelate.utils.lego_utils import legoData
-from .utils.settings_utils import getSettings
 from .print_estimate import PrintEstimate
+from .utils.settings_utils import getSettings
 
 
 class AutoSplit(object):
@@ -39,21 +39,36 @@ class AutoSplit(object):
 		rotation = (90, 0, 90) if x > y else (90, 0, 0)
 		major_dir = "X" if x > y else "Y"
 
-		vert_pos = self.find_vert_plane_positions(self.target_object.location, size, major_dir)
+		vertices = [self.target_object.matrix_world * Vector(corner) for corner in self.target_object.bound_box]
+
+		mid_vec = (vertices[0] + vertices[7]) / 2
+
+		objs = self.scene.objects
+		vert_exists = False
+		for obj in objs:
+			obj.select = False
+			if obj.name.startswith(vert_plane_name):
+				vert_exists = True
+
+		vert_pos = self.find_vert_plane_positions(mid_vec, size, major_dir)
+
 		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
 		if vert_pos:
-			for vp in vert_pos:
-				add_plane(self.context, colour=False, size=size, location=vp, rotation=rotation,
-						  name=vert_plane_name)
+			if not vert_exists:
+				for vp in vert_pos:
+					add_plane(self.context, colour=False, size=size, location=vp, rotation=rotation,
+							  name=vert_plane_name)
 
-			objs = self.scene.objects
-			for obj in objs:
-				obj.select = False
-				if obj.name.startswith(vert_plane_name):
-					self.scene.objects.active = obj
-					obj.select = True
+				objs = self.scene.objects
+				for obj in objs:
+					obj.select = False
+					if obj.name.startswith(vert_plane_name):
+						self.scene.objects.active = obj
+						obj.select = True
 
-			planes_to_use = AutoBoolean('UNION').join_selected_meshes()
+				planes_to_use = AutoBoolean('UNION').join_selected_meshes()
+			else:
+				planes_to_use = objs[vert_plane_name]
 			# split target object with planes
 			self.plane_bool_difference(self.target_object, planes_to_use)
 
@@ -68,7 +83,7 @@ class AutoSplit(object):
 		horz_slices = 0
 
 		for ro in resultant_objects:
-			#print(ro.name)
+			# print(ro.name)
 			plane_name = "~{0}~Plane".format(ro.name)
 			ro.select = True
 			bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')

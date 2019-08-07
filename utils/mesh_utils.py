@@ -7,7 +7,7 @@ from .colours import Colours
 def homeObject(obj):
 	obj.select = True
 	bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-	bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_VOLUME')
+	#bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_VOLUME')
 
 	vertices = [obj.matrix_world * Vector(corner) for corner in obj.bound_box]
 	z_height = vertices[0][2]

@@ -1,9 +1,9 @@
 import bpy
+from brixelate.utils.lego_utils import legoData
+from brixelate.utils.mesh_utils import add_plane, AutoBoolean, convert_to_tris
 from mathutils import Vector
 import numpy as np
 
-from brixelate.utils.lego_utils import legoData
-from brixelate.utils.mesh_utils import add_plane, AutoBoolean, convert_to_tris
 from .implementData import ImplementData
 from .print_estimate import PrintEstimate
 from .utils.settings_utils import getSettings
@@ -183,7 +183,6 @@ class AutoSplit(object):
 
 		count = ([int(el) for el in np.unique(array) if el > 0])
 
-
 		# print(start_point)  # x,y,z
 
 		# print("array size: {}".format(array.shape))
@@ -220,9 +219,15 @@ class AutoSplit(object):
 				# print(ind)
 				y = int(ind[0])
 				x = int(ind[1])
+				try:
+					above = array[top + 1][y][x]
+				except:
+					above = -1
 
-				above = array[top + 1][y][x]
-				below = array[bottom - 1][y][x]
+				try:
+					below = array[bottom - 1][y][x]
+				except:
+					below = -1
 				# print("above: {}, below: {}".format(above, below))
 				if below <= 0:
 					below_count += 1
@@ -290,7 +295,7 @@ class AutoSplit(object):
 		# print(new_z)
 		z_full_array = [z + bottom_index for z in new_z]
 
-		plane_offset = Vector((0, 0, 0))
+		plane_offset = Vector((0, 0, 1.6))
 		z_world = [Vector((0, 0, z * h)) + plane_offset for z in z_full_array]
 		# print(z_world)
 		if z_world:

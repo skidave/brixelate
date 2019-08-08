@@ -55,12 +55,20 @@ class PanelSettings(bpy.types.PropertyGroup):
 								 default=(True, True, True, True, True, True))  # 1x1,2,3,4,6,8
 	bricks2 = BoolVectorProperty(name="2xN Bricks", size=5, default=(True, True, True, True, True))  # 2x2,3,4,6,8
 
-	num_vert_slices = IntProperty(
-		name='Slices',
-		description="Number of vertical slices",
+	num_major_cuts = IntProperty(
+		name='Major Cuts',
+		description="Number of major dimension vertical cuts",
 		default=0,
 		min=0,
 		max = 10
+	)
+
+	num_minor_cuts = IntProperty(
+		name='Minor Cuts',
+		description="Number of minor dimension vertical cuts",
+		default=0,
+		min=0,
+		max=10
 	)
 
 	vert = BoolProperty(

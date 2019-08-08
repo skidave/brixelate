@@ -123,6 +123,10 @@ class resetBrixelate(bpy.types.Operator):
 		for ob in bpy.data.objects:
 			ob.hide = False
 			#if ob.name.startswith('Brick ') or ob.name.startswith('SplitPlane') or re.match(r"[BP]_\dx\d", ob.name) is not None:
+
+			if getSettings().iterations and re.match(r"VertPlane", ob.name):
+				ob.name = "~COPY~" + ob.name
+
 			if re.match(r"~COPY~", ob.name) is None:
 				bpy.data.objects.remove(ob, do_unlink=True)
 			else:

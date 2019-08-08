@@ -103,7 +103,10 @@ class BrixelPanel(bpy.types.Panel):
 		box.label('Automatic', icon="SCRIPTWIN")
 		row = box.row()
 		row.prop(settings, 'vert', icon="FILE_TICK" if settings.vert else "RADIOBUT_OFF", toggle=True)
-		row.prop(settings, 'num_vert_slices', icon="GRID")
+		if settings.vert:
+			row = box.row()
+			row.prop(settings, 'num_major_cuts', icon="GRID")
+			row.prop(settings, 'num_minor_cuts', icon="GRID")
 		row = box.row()
 		row.operator("mesh.auto_split_object", text="Naive", icon="MOD_BEVEL")
 		box = topbox.box()

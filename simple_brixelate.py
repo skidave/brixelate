@@ -23,7 +23,8 @@ class SimpleBrixelate(object):
 		self.scene = self.context.scene
 		self.target_object = target_object
 
-		homeObject(self.target_object)
+		if not getSettings().iterations:
+			homeObject(self.target_object)
 		self.object_copy(self.target_object)
 
 		self.brixelate(self.target_object)

@@ -1,9 +1,9 @@
 import bpy
-from brixelate.utils.lego_utils import legoData
-from brixelate.utils.mesh_utils import add_plane, AutoBoolean, convert_to_tris
 from mathutils import Vector
 import numpy as np
 
+from brixelate.utils.lego_utils import legoData
+from brixelate.utils.mesh_utils import add_plane, AutoBoolean, convert_to_tris
 from .implementData import ImplementData
 from .print_estimate import PrintEstimate
 from .utils.settings_utils import getSettings
@@ -32,17 +32,11 @@ class AutoSplit(object):
 	# self.horizontal_first(start_point, array, count, size)
 
 	def vertical_first(self, start_point, array):
-		vert_plane_name = "VertPlane"
-
-		x, y, z = self.target_object.dimensions[:]
-		size = x if x > y else y
-		rotation = (90, 0, 90) if x > y else (90, 0, 0)
-		major_dir = "X" if x > y else "Y"
 
 		vertices = [self.target_object.matrix_world * Vector(corner) for corner in self.target_object.bound_box]
-
 		mid_vec = (vertices[0] + vertices[7]) / 2
 
+		vert_plane_name = "VertPlane"
 		objs = self.scene.objects
 		vert_exists = False
 		for obj in objs:
@@ -50,13 +44,13 @@ class AutoSplit(object):
 			if obj.name.startswith(vert_plane_name):
 				vert_exists = True
 
-		vert_pos = self.find_vert_plane_positions(mid_vec, size, major_dir)
+		vert_pos, rotations, size = self.find_vert_plane_positions(mid_vec, self.target_object.dimensions)
 
 		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
 		if vert_pos:
 			if not vert_exists:
-				for vp in vert_pos:
-					add_plane(self.context, colour=False, size=size, location=vp, rotation=rotation,
+				for vp, r, s in zip(vert_pos, rotations, size):
+					add_plane(self.context, colour=False, size=s, location=vp, rotation=r,
 							  name=vert_plane_name)
 
 				objs = self.scene.objects
@@ -89,10 +83,8 @@ class AutoSplit(object):
 			bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
 
 			vertices = [ro.matrix_world * Vector(corner) for corner in ro.bound_box]
-
 			bot_left = vertices[0]
 			top_right = vertices[6]
-			mid = (top_right - bot_left) / 2 + bot_left
 
 			# x,y,z
 			# bl_ind = np.array([math.floor(v) for v in np.divide(bot_left - start_point, lego_dims)]) + startpoint_index
@@ -107,7 +99,7 @@ class AutoSplit(object):
 
 			sliced_array = array[bl_ind[2]:tr_ind[2] + 1, bl_ind[1]:tr_ind[1] + 1, bl_ind[0]:tr_ind[0] + 1]
 
-			horz_positions = self.find_plane_positions(sliced_array, bl_ind[2], mid)
+			horz_positions = self.find_plane_positions(sliced_array, bl_ind[2])
 
 			if horz_positions is not None:
 				horz_slices += len(horz_positions)
@@ -116,6 +108,7 @@ class AutoSplit(object):
 				size = x if x > y else y
 
 				for p in horz_positions:
+					# add in target location as offest for plane
 					ro_loc = list(ro.location[:2])
 					ro_loc.append(0)
 					ro_loc = tuple(ro_loc)
@@ -181,7 +174,7 @@ class AutoSplit(object):
 
 		PrintEstimate(self.context)
 
-	def find_plane_positions(self, array, bottom_index, obj_mid):
+	def find_plane_positions(self, array, bottom_index):
 		"""Returns a list of zpositions"""
 		zpositions = []
 		possible_positions = []
@@ -190,7 +183,7 @@ class AutoSplit(object):
 
 		count = ([int(el) for el in np.unique(array) if el > 0])
 
-		plane_offset = Vector((0, 0, 0))
+
 		# print(start_point)  # x,y,z
 
 		# print("array size: {}".format(array.shape))
@@ -296,28 +289,60 @@ class AutoSplit(object):
 		# 		new_z.append(crit[1])
 		# print(new_z)
 		z_full_array = [z + bottom_index for z in new_z]
-		z_world = [Vector((0, 0, z * h)) + Vector((obj_mid[0], obj_mid[1], 0)) + plane_offset for z in z_full_array]
+
+		plane_offset = Vector((0, 0, 0))
+		z_world = [Vector((0, 0, z * h)) + plane_offset for z in z_full_array]
 		# print(z_world)
 		if z_world:
 			return z_world
 		else:
 			return None
 
-	def find_vert_plane_positions(self, start_point, major_dim, major_dir):
+	def find_vert_plane_positions(self, start_point, dimensions):
+
+		x, y, z = dimensions
+		major_dim = x if x > y else y
+		minor_dim = x if x < y else y
+
+		major_size = minor_dim
+		minor_size = major_dim
+
+		major_rotation = (90, 0, 90) if x > y else (90, 0, 0)
+		minor_rotation = (90, 0, 90) if x < y else (90, 0, 0)
+		major_dir = "X" if x > y else "Y"
+		minor_dir = "X" if x < y else "Y"
 
 		vert_bool = getSettings().vert
-		piece_count = getSettings().num_vert_slices + 1
+		major_count = getSettings().num_major_cuts + 1
+		minor_count = getSettings().num_minor_cuts + 1
 		if vert_bool:
-			positions = []
-			for i in range(1, piece_count):
-				p = ((i * major_dim) / piece_count) - major_dim / 2
-				positions.append(p)
+			major_positions = []
+			major_rotations = []
+			major_sizes = []
+			for i in range(1, major_count):
+				p = ((i * major_dim) / major_count) - major_dim / 2
+				major_positions.append(p)
+				major_rotations.append(major_rotation)
+				major_sizes.append(major_size)
+			major_vec_tup = [(0, p, 0) if major_dir == "Y" else (p, 0, 0) for p in major_positions]
 
-			vec_tup = [(0, p, 0) if major_dir == "Y" else (p, 0, 0) for p in positions]
+			minor_positions = []
+			minor_rotations = []
+			minor_sizes = []
+			for i in range(1, minor_count):
+				p = ((i * minor_dim) / minor_count) - minor_dim / 2
+				minor_positions.append(p)
+				minor_rotations.append(minor_rotation)
+				minor_sizes.append(minor_size)
 
-			positions = [Vector(vec) + start_point for vec in vec_tup]
-			# positions = [Vector(vec) for vec in vec_tup]
-			return positions
+			minor_vec_tup = [(0, p, 0) if minor_dir == "Y" else (p, 0, 0) for p in minor_positions]
+
+			vec_tups = major_vec_tup + minor_vec_tup
+			rotations = major_rotations + minor_rotations
+			sizes = major_sizes + minor_sizes
+			positions = [Vector(vec) + start_point for vec in vec_tups]
+
+			return positions, rotations, sizes
 		else:
 			pass
 

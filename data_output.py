@@ -27,7 +27,7 @@ class DataOutput(object):
 	def file_name(self):
 		ob_name = ImplementData.object_name
 		now_string = '{:%Y-%m-%d_%H-%M-%S}'.format(datetime.datetime.now())
-		csv_file_name = "{0}_{1}_V{2}_{3}.csv".format(ob_name, self.brick_type, self.vert, now_string)
+		csv_file_name = "{0}_V{1}_{2}_{3}.csv".format(ob_name, self.vert, self.brick_type, now_string)
 
 		return os.path.join(self.OUTPUT_DIR, csv_file_name)
 

@@ -1,6 +1,6 @@
 import bpy
 
-from brixelate.utils.settings_utils import getSettings
+from ..utils.settings_utils import getSettings
 from ..implementData import ImplementData
 
 
@@ -97,28 +97,44 @@ class BrixelPanel(bpy.types.Panel):
 		layout.separator()
 		topbox = layout.box()
 		topbox.label("Shelling", icon="MESH_GRID")
+
 		# row = topbox.row()
 		# row.operator("tool.implementation", text="Create Shell", icon="UGLYPACKAGE")
 		box = topbox.box()
-		box.label('Automatic', icon="SCRIPTWIN")
+
 		row = box.row()
-		row.prop(settings, 'vert', icon="FILE_TICK" if settings.vert else "RADIOBUT_OFF", toggle=True)
-		if settings.vert:
-			row = box.row()
-			row.prop(settings, 'num_major_cuts', icon="GRID")
-			row.prop(settings, 'num_minor_cuts', icon="GRID")
+		split = row.split(percentage=0.3)
+		c = split.column()
+		c.label('Automatic', icon="SCRIPTWIN")
+		split = split.split()
+		c = split.column()
+		c.operator("mesh.add_auto_planes", text="Auto Add Planes", icon="MOD_BEVEL")
+		#row = box.row()
+		#row.prop(settings, 'vert', icon="FILE_TICK" if settings.vert else "RADIOBUT_OFF", toggle=True)
+		#if settings.vert:
 		row = box.row()
-		row.operator("mesh.auto_split_object", text="Naive", icon="MOD_BEVEL")
+		row.prop(settings, 'num_major_cuts', icon="GRID")
+		row.prop(settings, 'num_minor_cuts', icon="GRID")
+
 		box = topbox.box()
-		box.label('Manual', icon="BORDER_RECT")
 		row = box.row()
-		row.operator("mesh.add_split_plane", text="Add Plane", icon="MESH_PLANE")
-		row = box.row()
-		row.prop(settings, "displace_split")
-		row.prop(settings, "lock_objects", text=("Lock Objects" if settings.lock_objects else "Unlock Objects"),
-				 toggle=True)
-		row = box.row()
-		row.operator("mesh.split_object", text="Split", icon="MOD_BOOLEAN")
+		split = row.split(percentage=0.3)
+		c = split.column()
+		c.label('Manual', icon="BORDER_RECT")
+		split = split.split()
+		c = split.column()
+		c.operator("mesh.add_split_plane", text="Manual Add Plane", icon="MESH_PLANE")
+
+		topbox.separator()
+		row = topbox.row()
+		split = row.split(percentage=0.35)
+		c = split.column()
+		c.prop(settings, 'plane_bounds')
+		split = split.split()
+		c = split.column()
+		c.operator("tool.reset_shelling", text="Reset Shelling",icon="FILE_REFRESH")
+		row=topbox.row()
+		row.operator("mesh.auto_split_object", text="Decompose", icon="MOD_BOOLEAN")
 
 		layout.separator()
 		topbox = layout.box()
@@ -193,38 +209,6 @@ class BrixelPanel(bpy.types.Panel):
 		else:
 			col = row.column()
 			col.label('No Data')
-
-		# layout.separator()
-		# box = layout.box()
-		# box.prop(settings, "experimentation", icon="TRIA_DOWN" if settings.experimentation else "TRIA_RIGHT",
-		# 		 text="Experimentation", emboss=False)
-		#
-		# if settings.experimentation:
-		# 	box.label("Scale", icon="FCURVE")
-		# 	row = box.row()
-		# 	row.prop(settings, "max_range")
-		# 	row.prop(settings, "scale_factor", slider=True)
-		#
-		# 	box.operator("tool.brixelate_experiments", text="Run Scales", icon="FILE_TICK")
-		#
-		# 	layout.separator()
-		# 	# box = layout.box()
-		# 	box.label("Ratio", icon="SORTSIZE")
-		# 	row = box.row()
-		# 	row.prop(settings, "start_ratio")
-		#
-		# 	row.prop(settings, "end_ratio")
-		# 	row = box.row()
-		# 	row.prop(settings, "ratio_step", text="Number of Steps")
-		# 	row = box.row()
-		# 	row.prop(settings, "spin_object")
-		# 	if settings.spin_object:
-		# 		row = box.row(align=True)
-		# 		row.prop(settings, "roll")
-		# 		row.prop(settings, "pitch")
-		# 		row.prop(settings, "yaw")
-		#
-		# 	box.operator("tool.brixelate_ratio", text="Run Ratios", icon="FILE_TICK")
 
 # end draw
 

@@ -5,9 +5,9 @@ import bpy
 import bmesh
 from mathutils import Vector
 
-from brixelate.utils.lego_utils import legoData
+from .utils.lego_utils import legoData
 from .implementData import ImplementData
-from brixelate.utils.mesh_utils import AutoBoolean
+from .utils.mesh_utils import AutoBoolean, object_copy
 
 
 class BrixelateImplementation(object):
@@ -28,6 +28,10 @@ class BrixelateImplementation(object):
 		self.bricks_boolean()
 
 		ImplementData.shell = False
+
+		target_object = self.scene.objects[ImplementData.object_name]
+
+		object_copy(context, target_object, prefix="~HOLLOW~")
 
 	def bricks_boolean(self):
 

@@ -151,7 +151,8 @@ class legoData():
 
 		# Change brick colour
 		if colour:
-			brick_colour = self.brick_colour([width, depth, height], new_brick_name)
+			colour_name = new_brick_name.split('.')[0]
+			brick_colour = self.brick_colour([width, depth, height], colour_name)
 			new_brick.data.materials.append(brick_colour)
 
 		bpy.context.scene.objects.active = None

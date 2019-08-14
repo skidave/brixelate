@@ -58,5 +58,18 @@ def assemblyUpdate(self, context):
 
 	Assembly(context).assemblyUpdate(self.assembly_level)
 
+def showPlaneBounds(self, context):
+	val = self.plane_bounds
+	print(val)
+	plane_names = ['SplitPlane', 'VertPlane']
+
+	for ob in context.scene.objects:
+		if ob.name.startswith(plane_names[0]) or ob.name.startswith(plane_names[1]):
+			if val:
+				ob.draw_type='BOUNDS'
+			else:
+				ob.draw_type = 'TEXTURED'
+
+
 
 

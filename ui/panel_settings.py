@@ -5,7 +5,7 @@ from bpy.props import (BoolProperty,
 					   FloatProperty,
 					   )
 
-from brixelate.utils.settings_utils import *
+from ..utils.settings_utils import *
 
 
 class PanelSettings(bpy.types.PropertyGroup):
@@ -37,6 +37,14 @@ class PanelSettings(bpy.types.PropertyGroup):
 		name="Iterations",
 		description="Tick if planning on creating iterations",
 		default=False,
+
+	)
+
+	plane_bounds = BoolProperty(
+		name="Plane Bounds",
+		description="Show Planes as bounds",
+		default=False,
+		update=showPlaneBounds
 	)
 
 	brick_selection = BoolProperty(name="Expand Brick Selection", default=False)

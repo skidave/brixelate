@@ -3,6 +3,7 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 from .colours import Colours
+from .settings_utils import getSettings
 
 def homeObject(obj):
 	obj.select = True
@@ -173,13 +174,18 @@ def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_locati
 
 	if colour:
 		colours = Colours  # loads colours from separate class
-		colour = bpy.data.materials.new(name="default_colour")
+		colour = bpy.data.materials.new(name="colour"+split_plane.name)
 		split_plane.data.materials.append(colour)
 		split_plane.data.materials[0].diffuse_color = colours.default_colour
 
 	split_plane.select = True
 	bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
 	split_plane.location = location
+
+	if getSettings().plane_bounds:
+		split_plane.draw_type = 'BOUNDS'
+	else:
+		split_plane.draw_type = 'TEXTURED'
 
 	return location, plane_normal
 
@@ -327,3 +333,26 @@ def obj_print_estimate(obj, wall_thickness, infill, wall_speed, infill_speed):
 	infill_time = infill_vol * (1 / infill_speed)
 
 	return sa, vol, wall_time + infill_time
+
+def apply_all_modifiers(obj, scene):
+	# get a reference to the current obj.data
+	old_mesh = obj.data
+	# settings for to_mesh
+	apply_modifiers = True
+	settings = 'PREVIEW'
+	new_mesh = obj.to_mesh(scene, apply_modifiers, settings)
+	# object will still have modifiers, remove them
+	obj.modifiers.clear()
+	# assign the new mesh to obj.data
+	obj.data = new_mesh
+	# remove the old mesh from the .blend
+	bpy.data.meshes.remove(old_mesh)
+
+def object_copy(context, target_object, prefix="~COPY~"):
+	target_object.select = True
+	bpy.ops.object.duplicate()
+	dup = context.selected_objects[0]
+
+	dup.name = prefix + target_object.name
+	dup.hide = True
+	dup.select = False

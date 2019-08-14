@@ -1,6 +1,6 @@
 import bpy
-from brixelate.utils.lego_utils import legoData
-from brixelate.utils.mesh_utils import add_plane, AutoBoolean, convert_to_tris
+from .utils.lego_utils import legoData
+from .utils.mesh_utils import add_plane, AutoBoolean, convert_to_tris, apply_all_modifiers
 from mathutils import Vector
 import numpy as np
 
@@ -24,50 +24,29 @@ class AutoSplit(object):
 		array = ImplementData.array
 		count = ([int(el) for el in np.unique(array) if el > 0])
 
-		x, y, z = self.target_object.dimensions[:]
-		size = x if x > y else y
+		self.decompose(start_point, array)
 
-		self.vertical_first(start_point, array)
+	def decompose(self, start_point, array):
+		target = self.target_object
 
-	# self.horizontal_first(start_point, array, count, size)
-
-	def vertical_first(self, start_point, array):
-
-		vertices = [self.target_object.matrix_world * Vector(corner) for corner in self.target_object.bound_box]
-		mid_vec = (vertices[0] + vertices[7]) / 2
-
-		vert_plane_name = "VertPlane"
-		objs = self.scene.objects
-		vert_exists = False
-		for obj in objs:
-			obj.select = False
-			if obj.name.startswith(vert_plane_name):
-				vert_exists = True
-
-		vert_pos, rotations, size = self.find_vert_plane_positions(mid_vec, self.target_object.dimensions)
-
-		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
-		if vert_pos:
-			if not vert_exists:
-				for vp, r, s in zip(vert_pos, rotations, size):
-					add_plane(self.context, colour=False, size=s, location=vp, rotation=r,
-							  name=vert_plane_name)
-
-				objs = self.scene.objects
-				for obj in objs:
-					obj.select = False
-					if obj.name.startswith(vert_plane_name):
-						self.scene.objects.active = obj
-						obj.select = True
-
-				planes_to_use = AutoBoolean('UNION').join_selected_meshes()
-			else:
-				planes_to_use = objs[vert_plane_name]
-			# split target object with planes
-			self.plane_bool_difference(self.target_object, planes_to_use)
+		if list(target.modifiers):
+			apply_all_modifiers(target, self.scene)
+			self.scene.objects.active = target
+			mesh = self.ops.mesh
+			self.ops.object.mode_set(mode='EDIT')
+			mesh.select_all(action='DESELECT')
+			mesh.select_loose()
+			mesh.delete(type='VERT')
+			mesh.select_all(action='SELECT')
+			mesh.separate(type='LOOSE')
+			self.ops.object.mode_set(mode='OBJECT')
 
 		resultant_objects = [ob for ob in self.scene.objects if ob.name.startswith(self.target_object.name)]
 
+		self.add_horz_planes(resultant_objects, array, start_point)
+		pass
+
+	def add_horz_planes(self, resultant_objects, array, start_point):
 		z, y, x = array.shape
 		startpoint_index = [0, 0, 0]  # np.array([int(el) for el in [(x - 1) / 2, (y - 1) / 2, (z - 1) / 2]])
 
@@ -134,43 +113,6 @@ class AutoSplit(object):
 			if ob.name.startswith(self.target_object.name):
 				ob.select = True
 				bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
-
-		PrintEstimate(self.context)
-
-	def horizontal_first(self, start_point, array, size):
-		self.plane_positions = self.find_plane_positions(start_point, array)
-
-		ImplementData.horizontal_slices = len(self.plane_positions)
-
-		vert_pos = self.find_vert_plane_positions(start_point, size)
-
-		ImplementData.vertical_slices = 0 if vert_pos is None else len(vert_pos)
-
-		for p in self.plane_positions:
-			add_plane(self.context, colour=False, size=size, location=p, name='SplitPlane')
-
-		if vert_pos:
-			for vp in vert_pos:
-				add_plane(self.context, colour=False, size=size + 1, location=vp, rotation=(90, 0, 0),
-						  name='SplitPlane')
-
-		# Join all planes together into one object
-		objs = bpy.data.objects
-		for obj in objs:
-			obj.select = False
-			if obj.name.startswith('SplitPlane'):
-				self.scene.objects.active = obj
-				obj.select = True
-
-		planes_to_use = AutoBoolean('UNION').join_selected_meshes()
-		# split target object with planes
-		self.plane_bool_difference(self.target_object, planes_to_use)
-
-		self.ops.object.select_all(action='DESELECT')
-		for ob in self.scene.objects:
-			if ob.name.startswith(self.target_object.name):
-				ob.select = True
-				bpy.ops.object.origin_set(type='ORIGIN_GEOMETRY')
 
 		PrintEstimate(self.context)
 
@@ -295,7 +237,7 @@ class AutoSplit(object):
 		# print(new_z)
 		z_full_array = [z + bottom_index for z in new_z]
 
-		plane_offset = Vector((0, 0, 1.6))
+		plane_offset = Vector((0, 0, 0))
 		z_world = [Vector((0, 0, z * h)) + plane_offset for z in z_full_array]
 		# print(z_world)
 		if z_world:

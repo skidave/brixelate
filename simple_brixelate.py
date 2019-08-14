@@ -9,7 +9,7 @@ import bmesh
 from mathutils import Vector
 import numpy as np
 
-from .utils.mesh_utils import getVertices, getEdges, rayInside, homeObject, obj_volume, obj_surface_area
+from .utils.mesh_utils import getVertices, getEdges, rayInside, homeObject, obj_volume, obj_surface_area, object_copy
 from .utils.lego_utils import legoData
 from .utils.settings_utils import getSettings
 from .implementData import ImplementData
@@ -25,7 +25,7 @@ class SimpleBrixelate(object):
 
 		if not getSettings().iterations:
 			homeObject(self.target_object)
-		self.object_copy(self.target_object)
+		object_copy(context, self.target_object)
 
 		self.brixelate(self.target_object)
 
@@ -353,11 +353,4 @@ class SimpleBrixelate(object):
 		sorted_bricks = sorted(brick_dict.items(), key=itemgetter(1), reverse=True)
 		ImplementData.sorted_bricks = sorted_bricks
 
-	def object_copy(self, target_object):
-		target_object.select = True
-		bpy.ops.object.duplicate()
-		dup = self.context.selected_objects[0]
 
-		dup.name = "~COPY~" + target_object.name
-		dup.hide = True
-		dup.select = False

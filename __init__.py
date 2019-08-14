@@ -1,5 +1,5 @@
 bl_info = {
-	"name": "Brixelate",
+	"name": "Hybrid Prototyping",
 	"description": "Generates a LEGO assembly from a mesh object",
 	"author": "David Mathias",
 	"version": (0, 0, 9),

@@ -8,8 +8,8 @@ class BrixelPanel(bpy.types.Panel):
 	bl_space_type = "VIEW_3D"
 	bl_region_type = "TOOLS"
 	bl_context = "objectmode"
-	bl_category = "Brixelate"
-	bl_label = "Brixelate"
+	bl_category = "Hybrid Prototyping"
+	bl_label = "Hybrid Prototyping"
 
 	def draw(self, context):
 		scene = context.scene

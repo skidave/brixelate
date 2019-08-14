@@ -1,6 +1,6 @@
 import bpy
 
-from brixelate.utils.settings_utils import getSettings
+from ..utils.settings_utils import getSettings
 from ..implementData import ImplementData
 
 
@@ -8,8 +8,8 @@ class BrixelPanel(bpy.types.Panel):
 	bl_space_type = "VIEW_3D"
 	bl_region_type = "TOOLS"
 	bl_context = "objectmode"
-	bl_category = "Brixelate"
-	bl_label = "Brixelate"
+	bl_category = "Hybrid Prototyping"
+	bl_label = "Hybrid Prototyping"
 
 	def draw(self, context):
 		scene = context.scene
@@ -30,7 +30,7 @@ class BrixelPanel(bpy.types.Panel):
 		# box.prop(settings, "use_shell_as_bounds")
 
 		if settings.use_lego:
-			box.label("LEGO Brick Layout", icon="SCRIPT")  # or SCRIPTWIN
+			box.label("Brixellation", icon="SCRIPT")  # or SCRIPTWIN
 			row = box.row(align=True)
 			row.prop(settings, "all_plates", text="LEGO Plates",
 					 icon="FILE_TICK" if settings.all_plates else "RADIOBUT_OFF",
@@ -88,71 +88,66 @@ class BrixelPanel(bpy.types.Panel):
 							 icon="FILE_TICK" if settings.bricks2[i] else "RADIOBUT_OFF", toggle=True)
 
 		row = box.row()
+		row.prop(settings, "iterations")
 		row.operator("tool.simple_brixelate", text="Go", icon="FILE_TICK")
-		row = box.row()
-		row.operator("tool.implementation", text="Create Shell", icon="UGLYPACKAGE")
 
 		# layout.separator()
 		# layout.operator("tool.merge_test", text="Create Shell", icon="UV_FACESEL")
 
 		layout.separator()
 		topbox = layout.box()
-		topbox.label("Segmentation", icon="MESH_GRID")
+		topbox.label("Shelling", icon="MESH_GRID")
+
+		# row = topbox.row()
+		# row.operator("tool.implementation", text="Create Shell", icon="UGLYPACKAGE")
 		box = topbox.box()
-		box.label('Automatic', icon="SCRIPTWIN")
+
 		row = box.row()
-		row.operator("mesh.auto_split_object", text="Naive", icon="FILE_TICK")
-		#box = topbox.box()
-		# box.label('Manual', icon="BORDER_RECT")
-		# row = box.row()
-		# row.operator("mesh.add_split_plane", text="Add Plane", icon="MESH_PLANE")
-		# row = box.row()
-		# row.prop(settings, "displace_split")
-		# row.prop(settings, "lock_objects", text=("Lock Objects" if settings.lock_objects else "Unlock Objects"),
-		# 		 toggle=True)
-		# row = box.row()
-		# row.operator("mesh.split_object", text="Split", icon="MOD_BOOLEAN")
+		split = row.split(percentage=0.3)
+		c = split.column()
+		c.label('Automatic', icon="SCRIPTWIN")
+		split = split.split()
+		c = split.column()
+		c.operator("mesh.add_auto_planes", text="Auto Add Planes", icon="MOD_BEVEL")
+		#row = box.row()
+		#row.prop(settings, 'vert', icon="FILE_TICK" if settings.vert else "RADIOBUT_OFF", toggle=True)
+		#if settings.vert:
+		row = box.row()
+		row.prop(settings, 'num_major_cuts', icon="GRID")
+		row.prop(settings, 'num_minor_cuts', icon="GRID")
+
+		box = topbox.box()
+		row = box.row()
+		split = row.split(percentage=0.3)
+		c = split.column()
+		c.label('Manual', icon="BORDER_RECT")
+		split = split.split()
+		c = split.column()
+		c.operator("mesh.add_split_plane", text="Manual Add Plane", icon="MESH_PLANE")
+
+		topbox.separator()
+		row = topbox.row()
+		split = row.split(percentage=0.35)
+		c = split.column()
+		c.prop(settings, 'plane_bounds')
+		split = split.split()
+		c = split.column()
+		c.operator("tool.reset_shelling", text="Reset Shelling",icon="FILE_REFRESH")
+		row=topbox.row()
+		row.operator("mesh.auto_split_object", text="Decompose", icon="MOD_BOOLEAN")
 
 		layout.separator()
 		topbox = layout.box()
-		topbox.label('Fabrication')
+		topbox.label('Fabrication', icon="SOLID")
 		row = topbox.row()
-		row.operator("mesh.print_estimate", text="Print Estimate", icon="MESH_PLANE")
-		topbox.separator()
+		row.operator("mesh.assembly", text="Assembly Instructions", icon="MOD_BUILD")
+		row = topbox.row()
+		row.prop(settings, "assembly_level")
+		# row = topbox.row()
+		# row.operator("mesh.print_estimate", text="Print Estimate", icon="MESH_PLANE")
+
 		toprow = topbox.row()
-
-		col = toprow.column()
-		col.label(text="LEGO", icon="GROUP_VERTEX")
-
-		col.separator()
-		innerbox = col.box()
-		row = innerbox.row()
-		if ImplementData.brick_count > 1:
-
-			if ImplementData.sorted_bricks is not None:
-				col = row.column()
-				for el in ImplementData.sorted_bricks:
-					string = "{0}:    {1}".format(el[0], el[1])
-					col.label(string)
-				col.label("Total:    {}".format(ImplementData.brick_count))
-		else:
-			col = row.column()
-			col.label('No Data')
-
-		col = toprow.column()
-		col.label(text="3D Print", icon="MESH_PLANE")
-		col.separator()
-		innerbox = col.box()
-		row = innerbox.row()
-		if ImplementData.print_estimates is not None:
-				col = row.column()
-				for el in ImplementData.print_estimates:
-					string = "{0}:    {1:.1f}".format(el[0], el[1])
-					col.label(string)
-				col.label("Total:    {:.1f}".format(ImplementData.total_print_time))
-		else:
-			col = row.column()
-			col.label('No Data')
+		toprow.operator("mesh.data_output", text="Output Data", icon="FCURVE")
 
 		if len(scene.objects) > 0:
 
@@ -174,36 +169,46 @@ class BrixelPanel(bpy.types.Panel):
 		layout.operator("tool.reset_brixelate", text="Reset", icon="FILE_REFRESH")
 
 		layout.separator()
-		box = layout.box()
-		box.prop(settings, "experimentation", icon="TRIA_DOWN" if settings.experimentation else "TRIA_RIGHT",
-				 text="Experimentation", emboss=False)
+		topbox = layout.box()
 
-		if settings.experimentation:
-			box.label("Scale", icon="FCURVE")
-			row = box.row()
-			row.prop(settings, "max_range")
-			row.prop(settings, "scale_factor", slider=True)
+		toprow = topbox.row()
 
-			box.operator("tool.brixelate_experiments", text="Run Scales", icon="FILE_TICK")
+		col = toprow.column()
+		col.label(text="LEGO", icon="GROUP_VERTEX")
 
-			layout.separator()
-			# box = layout.box()
-			box.label("Ratio", icon="SORTSIZE")
-			row = box.row()
-			row.prop(settings, "start_ratio")
+		col.separator()
+		innerbox = col.box()
+		row = innerbox.row()
+		if ImplementData.brick_count > 0:
 
-			row.prop(settings, "end_ratio")
-			row = box.row()
-			row.prop(settings, "ratio_step", text="Number of Steps")
-			row = box.row()
-			row.prop(settings, "spin_object")
-			if settings.spin_object:
-				row = box.row(align=True)
-				row.prop(settings, "roll")
-				row.prop(settings, "pitch")
-				row.prop(settings, "yaw")
+			if ImplementData.sorted_bricks is not None:
+				col = row.column()
+				col.label("Total:    {}".format(ImplementData.brick_count))
+				for el in ImplementData.sorted_bricks:
+					string = "{0}:    {1}".format(el[0], el[1])
+					col.label(string)
 
-			box.operator("tool.brixelate_ratio", text="Run Ratios", icon="FILE_TICK")
+		else:
+			col = row.column()
+			col.label('No Data')
+
+		col = toprow.column()
+		col.label(text="3D Print", icon="MESH_PLANE")
+		col.separator()
+		innerbox = col.box()
+		row = innerbox.row()
+		if ImplementData.print_estimates is not None:
+				col = row.column()
+				col.label("Total:    {:.1f}".format(ImplementData.total_print_time))
+				print_est = ImplementData.print_estimates
+
+				for el in print_est:
+					string = "{0}:    {1:.1f}".format(el, print_est[el]['print'])
+					col.label(string)
+
+		else:
+			col = row.column()
+			col.label('No Data')
 
 # end draw
 

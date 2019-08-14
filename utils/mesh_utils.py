@@ -2,12 +2,13 @@ import bpy
 import bmesh
 from mathutils import Vector
 import numpy as np
-
+from .colours import Colours
+from .settings_utils import getSettings
 
 def homeObject(obj):
 	obj.select = True
 	bpy.ops.object.transform_apply(location=False, rotation=True, scale=True)
-	bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_VOLUME')
+	#bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_VOLUME')
 
 	vertices = [obj.matrix_world * Vector(corner) for corner in obj.bound_box]
 	z_height = vertices[0][2]
@@ -141,10 +142,26 @@ def get_angles(number_points):
 	return phi_s
 
 
-def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_location, name="SplitPlane"):
-	bpy.ops.mesh.primitive_plane_add(radius=size, location=location)
+def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_location, rotation=(0, 0, 0),
+			  name="SplitPlane"):
+	rotation_rad = tuple(np.deg2rad(i) for i in rotation)
+	bpy.ops.mesh.primitive_plane_add(radius=size, location=location, rotation=rotation_rad)
 	split_plane = context.selected_objects[0]
 	split_plane.name = name
+
+	me = split_plane.data
+	bm = bmesh.new()
+	bm.from_mesh(me)
+
+	bm.faces.ensure_lookup_table()
+	face = bm.faces[0]
+	plane_normal = face.normal
+
+	bmesh.ops.subdivide_edges(bm, edges=face.edges[:], cuts=12, use_grid_fill=True)
+
+	bm.to_mesh(me)
+	me.update()
+	bm.free()
 
 	# Solidifies plane to ensure difference operation works
 	bpy.context.scene.objects.active = split_plane
@@ -156,13 +173,21 @@ def add_plane(context, colour, size=50, location=bpy.context.scene.cursor_locati
 	split_plane.lock_scale = [False, False, True]  # locks scaling in z (thickness) axis
 
 	if colour:
-		colours = bpy.types.Scene.colours  # loads colours from separate class
-		colour = bpy.data.materials.new(name="default_colour")
+		colours = Colours  # loads colours from separate class
+		colour = bpy.data.materials.new(name="colour"+split_plane.name)
 		split_plane.data.materials.append(colour)
 		split_plane.data.materials[0].diffuse_color = colours.default_colour
 
 	split_plane.select = True
 	bpy.ops.object.origin_set(type='ORIGIN_CENTER_OF_MASS')
+	split_plane.location = location
+
+	if getSettings().plane_bounds:
+		split_plane.draw_type = 'BOUNDS'
+	else:
+		split_plane.draw_type = 'TEXTURED'
+
+	return location, plane_normal
 
 
 def bmesh_copy_from_object(obj, transform=True, triangulate=True, apply_modifiers=False):
@@ -219,7 +244,7 @@ class AutoBoolean(object):
 			self.boolean_mod(obj, ob, self.mode)
 		obj.select = True
 
-		convert_to_tris(obj)
+		#convert_to_tris(obj)
 
 		return obj
 
@@ -294,6 +319,7 @@ def obj_volume(obj):
 	bmesh.ops.triangulate(bm, faces=bm.faces)
 	return bm.calc_volume()
 
+
 def obj_print_estimate(obj, wall_thickness, infill, wall_speed, infill_speed):
 	"""
 	Estimates how long the object will take to print
@@ -302,8 +328,31 @@ def obj_print_estimate(obj, wall_thickness, infill, wall_speed, infill_speed):
 	sa = obj_surface_area(obj)
 
 	wall_vol = sa * wall_thickness
-	wall_time = wall_vol * (1/wall_speed)
+	wall_time = wall_vol * (1 / wall_speed)
 	infill_vol = (vol - wall_vol) * infill
-	infill_time = infill_vol * (1/infill_speed)
+	infill_time = infill_vol * (1 / infill_speed)
 
-	return wall_time + infill_time
+	return sa, vol, wall_time + infill_time
+
+def apply_all_modifiers(obj, scene):
+	# get a reference to the current obj.data
+	old_mesh = obj.data
+	# settings for to_mesh
+	apply_modifiers = True
+	settings = 'PREVIEW'
+	new_mesh = obj.to_mesh(scene, apply_modifiers, settings)
+	# object will still have modifiers, remove them
+	obj.modifiers.clear()
+	# assign the new mesh to obj.data
+	obj.data = new_mesh
+	# remove the old mesh from the .blend
+	bpy.data.meshes.remove(old_mesh)
+
+def object_copy(context, target_object, prefix="~COPY~"):
+	target_object.select = True
+	bpy.ops.object.duplicate()
+	dup = context.selected_objects[0]
+
+	dup.name = prefix + target_object.name
+	dup.hide = True
+	dup.select = False

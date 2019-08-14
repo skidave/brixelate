@@ -56,12 +56,12 @@ class legoData():
 	base_h = 3.2
 
 	# base colours for Nx1 bricks
-	base_colours = [(0.0, 0.9, 1),  # red
-					(0.592, 0.9, 1),  # blue
-					(0.339, 0.9, 1),  # green
-					(0.142, 0.9, 1),  # yellow
-					(0.797, 0.9, 1),  # purple
-					(0.486, 0.9, 1)]  # turquoise
+	base_colours = {1: (0.0, 0.9, 1),  # red
+					2: (0.592, 0.9, 1),  # blue
+					3: (0.339, 0.9, 1),  # green
+					4: (0.142, 0.9, 1),  # yellow
+					6: (0.797, 0.9, 1),  # purple
+					8: (0.486, 0.9, 1)}  # turquoise
 
 	@staticmethod
 	def getDims():
@@ -87,10 +87,10 @@ class legoData():
 		return w, d, h
 
 	# function to create a brick with width, depth and height at a point
-	def addNewBrickAtPoint(self, point, width, depth, height, number, name, studs=True, colour=True):
+	def addNewBrickAtPoint(self, point, width, depth, height, name, studs=True, colour=True):
 		_w, _d, _h = self.getDims()
 
-		new_brick_name = self.brickName([width, depth, height])
+		new_brick_name = self.brickName([width, depth, height]) + '.' + name
 
 		offset = 0.00
 		# offset = random.uniform(0.05, 0.2)
@@ -149,16 +149,15 @@ class legoData():
 
 		new_brick.location = point
 
-
 		# Change brick colour
 		if colour:
-			brick_colour = self.brick_colour([width, depth, height],new_brick_name)
+			colour_name = new_brick_name.split('.')[0]
+			brick_colour = self.brick_colour([width, depth, height], colour_name)
 			new_brick.data.materials.append(brick_colour)
 
 		bpy.context.scene.objects.active = None
 
-
-	def simple_add_brick_at_point(self, point, name):
+	def simple_add_brick_at_point(self, point, name, input_faces=None):
 		depth, width, height = 1., 1., 1.
 
 		w, d, h = self.getDims()
@@ -177,18 +176,27 @@ class legoData():
 
 		Faces = \
 			[
-				(0, 1, 2, 3),
-				(5, 4, 7, 6),
-				(0, 4, 5, 1),
-				(2, 1, 5, 6),
-				(2, 6, 7, 3),
-				(3, 7, 4, 0)
+				(0, 1, 2, 3),  # bottom
+				(5, 4, 7, 6),  # top
+				(0, 4, 5, 1),  # left
+				(2, 1, 5, 6),  # back
+				(2, 6, 7, 3),  # right
+				(3, 7, 4, 0),  # front
 			]
 
+		if input_faces is not None:
+			face_idx = [i for i, x in enumerate(input_faces) if x]
+			Faces = [Faces[i] for i in face_idx]
+		# vert_idx = set(list(sum(Faces, ())))
+		# Vertices = [Vertices[i] for i in vert_idx]
+
 		name_string = "temp " + name
+
 		newMesh = bpy.data.meshes.new(name_string)
 		newMesh.from_pydata(Vertices, [], Faces)
+		newMesh.validate()
 		newMesh.update()
+
 		new_brick = bpy.data.objects.new(name_string, newMesh)
 		bpy.context.scene.objects.link(new_brick)
 
@@ -330,13 +338,11 @@ class legoData():
 		width = brick_size[0]
 		depth = brick_size[1]
 
-		print(width)
-
 		if brick_name in bpy.data.materials:
 			mat = bpy.data.materials[brick_name]
 
 		else:
-			colour = self.base_colours[depth - 1]
+			colour = self.base_colours[depth]
 
 			if height == 1:
 				colour = [colour[0], colour[1] - 0.2, colour[2]]

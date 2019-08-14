@@ -5,7 +5,7 @@ from bpy.props import (BoolProperty,
 					   FloatProperty,
 					   )
 
-from brixelate.utils.settings_utils import *
+from ..utils.settings_utils import *
 
 
 class PanelSettings(bpy.types.PropertyGroup):
@@ -33,6 +33,20 @@ class PanelSettings(bpy.types.PropertyGroup):
 		update=showHideLEGO
 	)
 
+	iterations = BoolProperty(
+		name="Iterations",
+		description="Tick if planning on creating iterations",
+		default=False,
+
+	)
+
+	plane_bounds = BoolProperty(
+		name="Plane Bounds",
+		description="Show Planes as bounds",
+		default=False,
+		update=showPlaneBounds
+	)
+
 	brick_selection = BoolProperty(name="Expand Brick Selection", default=False)
 
 	experimentation = BoolProperty(name="Expand Experiments", default=False)
@@ -48,6 +62,38 @@ class PanelSettings(bpy.types.PropertyGroup):
 	bricks1 = BoolVectorProperty(name="1xN Bricks", size=6,
 								 default=(True, True, True, True, True, True))  # 1x1,2,3,4,6,8
 	bricks2 = BoolVectorProperty(name="2xN Bricks", size=5, default=(True, True, True, True, True))  # 2x2,3,4,6,8
+
+	num_major_cuts = IntProperty(
+		name='Major Cuts',
+		description="Number of major dimension vertical cuts",
+		default=0,
+		min=0,
+		max = 10
+	)
+
+	num_minor_cuts = IntProperty(
+		name='Minor Cuts',
+		description="Number of minor dimension vertical cuts",
+		default=0,
+		min=0,
+		max=10
+	)
+
+	vert = BoolProperty(
+		name="Vertical Slice",
+		description="Toggles vertical slicing",
+		default=False)
+
+	assembly_level = FloatProperty(
+		name='Stage',
+		description="The assembly order",
+		default=0,
+		min=0,
+		max=100,
+		precision=0,
+		subtype='PERCENTAGE',
+		update=assemblyUpdate
+	)
 
 	max_range = IntProperty(
 		name='Num',

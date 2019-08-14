@@ -2,6 +2,10 @@ import bpy
 import bmesh
 import mathutils
 from mathutils import Vector
+import re
+
+from .utils.colours import Colours
+from .implementData import ImplementData
 
 class SurfaceCheck():
 	viable_split = False
@@ -76,65 +80,39 @@ class SurfaceCheck():
 		return edges
 
 
-def SurfaceUpdate(context):
+def SplitPlaneUpdate(context):
 	objects = bpy.data.objects
 	surface_check = bpy.types.Scene.surface_check
-	colours = bpy.types.Scene.colours
+	colours = Colours
 
-	object_origins_to_surface = {}
+	plane_names = ['SplitPlane', 'VertPlane']
 
-	surface_present = "SplitPlane" in objects
-	num_mesh_objects = 0
-	for obj in objects:
-		if obj.type == 'MESH':
-			num_mesh_objects += 1
+	planes = []
 
-	if surface_present and num_mesh_objects > 1 and objects.is_updated:
-		surface = objects["SplitPlane"]
-		surface_origin = surface.matrix_world.to_translation()
+	viability =[]
 
-		for obj in objects:
-			if obj.type == 'MESH' and obj.name != "SplitPlane" and obj.hide == False:
-				obj_origin = obj.matrix_world.to_translation()
-				obj_to_surface = obj_origin - surface_origin
-				object_origins_to_surface[obj.name] = obj_to_surface.length
+	for ob in objects:
+		if ob.name.startswith(plane_names[0]) or ob.name.startswith(plane_names[1]):
+			planes.append(ob)
+			viability.append(0)
 
-				#obj.show_bounds = False
-				if obj.data.materials:
-					obj.data.materials[0].diffuse_color = colours.default_colour
+	if ImplementData.object_name and planes and objects.is_updated:
+		target_object = objects[ImplementData.object_name]
+
+		for i, plane in enumerate(planes):
+			if surface_check.CheckBoundingBox(context, plane, target_object):
+				if surface_check.CheckIntersection(context, plane, target_object):
+					viability[i] = 1
+					plane.data.materials[0].diffuse_color = colours.default_colour
 				else:
-					colour = bpy.data.materials.new(name="default_colour")
-					obj.data.materials.append(colour)
-					obj.data.materials[0].diffuse_color = colours.default_colour
-
-		if len(object_origins_to_surface) > 0 and bpy.context.mode == 'OBJECT':
-			nearest_object_name = min(object_origins_to_surface, key=object_origins_to_surface.get)
-			nearest_object = objects[nearest_object_name]
-			#nearest_object.show_bounds = True
-			nearest_object.data.materials[0].diffuse_color = colours.target_colour
-
-			surface_check.nearest_object_name = nearest_object_name
-
-			if surface_check.CheckBoundingBox(context, surface, nearest_object):
-
-				if surface_check.CheckIntersection(context, surface, nearest_object):
-					surface_check.viable_split = True
-					surface.data.materials[0].diffuse_color = colours.split_true
-				else:
-					surface_check.viable_split = False
-					surface.data.materials[0].diffuse_color = colours.split_false
+					viability[i] = 0
+					plane.data.materials[0].diffuse_color = colours.split_false
 			else:
-				surface_check.viable_split = False
-				surface.data.materials[0].diffuse_color = colours.split_false
+				viability[i] = 0
+				plane.data.materials[0].diffuse_color = colours.split_false
+		if sum(viability) == len(planes):
+			surface_check.viable_split = True
+		else:
+			surface_check.viable_split= False
 
-
-	elif not surface_present:
-		for obj in objects:
-			if obj.type == 'MESH':
-				#obj.show_bounds = False
-				if obj.data.materials:
-					obj.data.materials[0].diffuse_color = colours.default_colour
-				else:
-					colour = bpy.data.materials.new(name="default_colour")
-					obj.data.materials.append(colour)
-					obj.data.materials[0].diffuse_color = colours.default_colour
+		#print(surface_check.viable_split)

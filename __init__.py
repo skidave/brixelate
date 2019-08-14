@@ -1,5 +1,5 @@
 bl_info = {
-	"name": "Brixelate",
+	"name": "Hybrid Prototyping",
 	"description": "Generates a LEGO assembly from a mesh object",
 	"author": "David Mathias",
 	"version": (0, 0, 9),
@@ -19,15 +19,18 @@ from .operators import (resetBrixelate,
 						ratioBrixelate,
 						spinTest,
 						Implementation,
-						#AddSplitPlane,
-						#SplitObjectWithPlane,
+						AddSplitPlane,
+						SplitObjectWithPlane,
 						automatedSplitting,
-						printEstimates
+	# printEstimates,
+						assemblyInstructions,
+						dataOutput,
+						AddAutoPlanes,
+resetShelling
 						)
-from .ui.ui_panel import BrixelPanel
+from .surfaceCheck import SurfaceCheck, SplitPlaneUpdate
 from .ui.panel_settings import PanelSettings
-#from .surfaceCheck import SurfaceCheck, SurfaceUpdate
-#from .utils.colours import Colours
+from .ui.ui_panel import BrixelPanel
 
 classes = (
 	simpleBrixelate,
@@ -35,14 +38,19 @@ classes = (
 	ratioBrixelate,
 
 	resetBrixelate,
+	resetShelling,
 
 	spinTest,
 	Implementation,
 
-	#AddSplitPlane,
-	#SplitObjectWithPlane,
+	AddSplitPlane,
+	AddAutoPlanes,
+	SplitObjectWithPlane,
 	automatedSplitting,
-	printEstimates,
+	# printEstimates,
+
+	assemblyInstructions,
+	dataOutput,
 
 	BrixelPanel,
 	PanelSettings)
@@ -52,13 +60,11 @@ def register():
 	for c in classes:
 		register_class(c)
 
-	#bpy.app.handlers.scene_update_post.clear()  # for testing
-	#bpy.app.handlers.scene_update_post.append(SurfaceUpdate)
-	#bpy.types.Scene.surface_check = SurfaceCheck()
-	#bpy.types.Scene.colours = Colours()
+	bpy.app.handlers.scene_update_post.clear()  # for testing
+	bpy.app.handlers.scene_update_post.append(SplitPlaneUpdate)
+	bpy.types.Scene.surface_check = SurfaceCheck()
 
 	bpy.types.Scene.my_settings = bpy.props.PointerProperty(type=PanelSettings)
-
 
 
 def unregister():
@@ -66,8 +72,7 @@ def unregister():
 		unregister_class(c)
 
 	del bpy.types.Scene.my_settings
-	#del bpy.types.Scene.surface_check
-	#del bpy.types.Scene.colours
+	del bpy.types.Scene.surface_check
 
 
 if __name__ == "__main__":

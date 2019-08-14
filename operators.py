@@ -13,9 +13,10 @@ from .auto_split import AutoSplit
 from .implementData import ImplementData
 from .utils.mesh_utils import add_plane
 from .print_estimate import PrintEstimate
+from .assembly import Assembly
+from .data_output import DataOutput
+from .add_planes import AddPlanes
 
-
-# TODO split 'shell' to make printable
 
 class simpleBrixelate(bpy.types.Operator):
 	'''Creates a LEGO assembly of the model'''
@@ -34,6 +35,9 @@ class simpleBrixelate(bpy.types.Operator):
 	def execute(self, context):
 		target_object = context.selected_objects[0]
 		SimpleBrixelate(context, target_object)
+
+		BrixelateImplementation(context)
+
 		self.report({"INFO"}, "Brixelate finished")
 
 		return {'FINISHED'}
@@ -44,59 +48,6 @@ class simpleBrixelate(bpy.types.Operator):
 
 # end simpleBrixelate
 
-class experimentationBrixelate(bpy.types.Operator):
-	'''Tests Brixelation of All Selected Objects in the Scene'''
-	bl_idname = "tool.brixelate_experiments"
-	bl_label = "Brixelate Experimentation"
-	bl_options = {"UNDO"}
-
-	@classmethod
-	def poll(self, context):
-		if getSettings().use_lego or getSettings().use_nano or getSettings().use_duplo:
-			if len(context.selected_objects) > 0:
-				number_objects = len(context.selected_objects)
-				mesh_objs = 0
-				for obj in context.selected_objects:
-					if obj.type == 'MESH':
-						mesh_objs += 1
-				if mesh_objs == number_objects:
-					return True
-
-	def execute(self, context):
-		self.report({"INFO"}, "Experimentation finished")
-		ExperimentBrixelate(context)
-		return {'FINISHED'}
-
-	def invoke(self, context, event):
-		return self.execute(context)
-
-
-class ratioBrixelate(bpy.types.Operator):
-	'''Generates Brixelate ratios for selected object'''
-	bl_idname = "tool.brixelate_ratio"
-	bl_label = "Brixelate Ratio"
-	bl_options = {"UNDO"}
-
-	@classmethod
-	def poll(self, context):
-		if len(context.selected_objects) > 0:
-			number_objects = len(context.selected_objects)
-			mesh_objs = 0
-			for obj in context.selected_objects:
-				if obj.type == 'MESH':
-					mesh_objs += 1
-			if mesh_objs == number_objects:
-				return True
-
-	def execute(self, context):
-		RatioBrixelate(context, method='vol')
-
-		self.report({"INFO"}, "Ratio Experimentation finished")
-
-		return {'FINISHED'}
-
-	def invoke(self, context, event):
-		return self.execute(context)
 
 
 class resetBrixelate(bpy.types.Operator):
@@ -107,27 +58,73 @@ class resetBrixelate(bpy.types.Operator):
 	@classmethod
 	def poll(self, context):
 		scene = context.scene
-		if len(scene.objects) > 0:
-			return True
+		for ob in scene.objects:
+			if re.match(r"~COPY~", ob.name):
+				return True
+
 
 	def execute(self, context):
 		start_time = time.time()
 		scene = context.scene
 
-		objs = bpy.data.objects
-		for ob in scene.objects:
+		for ob in bpy.data.objects:
 			ob.hide = False
-			if ob.name.startswith('Brick ') or ob.name.startswith('SplitPlane') or re.match(r"[BP]_\dx\d", ob.name) is not None:
-				objs.remove(ob, True)
+			#if ob.name.startswith('Brick ') or ob.name.startswith('SplitPlane') or re.match(r"[BP]_\dx\d", ob.name) is not None:
+
+			if getSettings().iterations and (re.match(r"VertPlane", ob.name) or re.match(r"SplitPlane", ob.name)):
+				ob.name = "~COPY~" + ob.name
+
+			if re.match(r"~COPY~", ob.name) is None:
+				bpy.data.objects.remove(ob, do_unlink=True)
+			else:
+				copy_name = ob.name
+				ob.name = copy_name.replace('~COPY~','')
+				ob.hide = False
 
 		for mat in bpy.data.materials:
-			mat.user_clear()
 			bpy.data.materials.remove(mat)
 		getSettings().show_hide_model = True
 		getSettings().show_hide_lego = True
 
+		ImplementData.sorted_bricks = None
+		ImplementData.print_estimates = None
+		ImplementData.object_name = ""
+
 		end_time = time.time()
 		self.report({"INFO"}, "Reset finished in {:5.3f} seconds".format(end_time - start_time))
+
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+class resetShelling(bpy.types.Operator):
+	'''Resets Shelling'''
+	bl_idname = "tool.reset_shelling"
+	bl_label = "Reset Shelling"
+
+	@classmethod
+	def poll(self, context):
+		scene = context.scene
+		for ob in scene.objects:
+			if re.match(r"~HOLLOW~", ob.name):
+				return True
+
+
+	def execute(self, context):
+		start_time = time.time()
+		scene = context.scene
+
+		for ob in bpy.data.objects:
+			if re.match(r"~COPY~", ob.name) or re.match(r"[BP]_\dx\d", ob.name):
+				pass
+			else:
+				if re.match(r"~HOLLOW~", ob.name) is None:
+					bpy.data.objects.remove(ob, do_unlink=True)
+				else:
+					copy_name = ob.name
+					ob.name = copy_name.replace('~HOLLOW~','')
+					ob.hide = False
 
 		return {'FINISHED'}
 
@@ -196,10 +193,10 @@ class Implementation(bpy.types.Operator):
 		scene = context.scene
 		bricks = 0
 		for ob in scene.objects:
-			if ob.name.startswith('Brick'):
+			if re.match(r"[BP]_\dx\d", ob.name):
 				bricks += 1
 
-		if bricks > 0:
+		if bricks > 0 and ImplementData.shell:
 			return True
 
 	def execute(self, context):
@@ -226,18 +223,40 @@ class AddSplitPlane(bpy.types.Operator):
 	@classmethod
 	def poll(self, context):
 		objects = bpy.data.objects
-		split_plane_present = 'SplitPlane' in objects
+		start = ImplementData.start_point is not None
+		obj_present = ImplementData.object_name in objects
 
-		return not split_plane_present
+		return start and obj_present
 
 	def execute(self, context):
-		add_plane(context, colour=True)
+		AddPlanes(context).manual_add()
 
 		return {"FINISHED"}
 
 	def invoke(self, context, event):
 		return self.execute(context)
 
+class AddAutoPlanes(bpy.types.Operator):
+	"""Creates a plane to split objects with"""
+	bl_idname = "mesh.add_auto_planes"
+	bl_label = "Add Split Plane"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		objects = bpy.data.objects
+		start = ImplementData.start_point is not None
+		obj_present = ImplementData.object_name in objects
+
+		return start and obj_present
+
+	def execute(self, context):
+		AddPlanes(context).auto_add()
+
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
 
 class SplitObjectWithPlane(bpy.types.Operator):
 	"""Splits object with plane"""
@@ -272,8 +291,9 @@ class automatedSplitting(bpy.types.Operator):
 		objects = bpy.data.objects
 		start = ImplementData.start_point is not None
 		obj_present = ImplementData.object_name in objects
+		viable_split = bpy.types.Scene.surface_check.viable_split
 
-		return start and obj_present
+		return start and obj_present and viable_split
 
 	def execute(self, context):
 		AutoSplit(context)
@@ -290,12 +310,105 @@ class printEstimates(bpy.types.Operator):
 
 	@classmethod
 	def poll(self, context):
-		if len([ob for ob in context.scene.objects if not ob.name.startswith('Brick') or re.match(r"[BP]_\dx\d", ob.name) is None]) > 0:
+		if len([ob for ob in context.scene.objects if re.match(r"[BP]_\dx\d", ob.name) is None]) > 0:
 			return True
 
 	def execute(self, context):
 		PrintEstimate(context)
 		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+class assemblyInstructions(bpy.types.Operator):
+	"""Creates assembly instructions"""
+	bl_idname = "mesh.assembly"
+	bl_label = "Assembly Instructions"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if len(context.scene.objects) > 0:
+			return True
+
+	def execute(self, context):
+		Assembly(context)
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+class dataOutput(bpy.types.Operator):
+	"""Outputs the data"""
+	bl_idname = "mesh.data_output"
+	bl_label = "Data Output"
+
+	@classmethod
+	def poll(self, context):
+		if ImplementData.print_estimates and ImplementData.sorted_bricks:
+			return True
+		#return True
+
+	def execute(self, context):
+		d = DataOutput()
+		self.report({"INFO"}, "Data saved to {}".format(d.output_file))
+		return {"FINISHED"}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
+
+class experimentationBrixelate(bpy.types.Operator):
+	'''Tests Brixelation of All Selected Objects in the Scene'''
+	bl_idname = "tool.brixelate_experiments"
+	bl_label = "Brixelate Experimentation"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if getSettings().use_lego or getSettings().use_nano or getSettings().use_duplo:
+			if len(context.selected_objects) > 0:
+				number_objects = len(context.selected_objects)
+				mesh_objs = 0
+				for obj in context.selected_objects:
+					if obj.type == 'MESH':
+						mesh_objs += 1
+				if mesh_objs == number_objects:
+					return True
+
+	def execute(self, context):
+		self.report({"INFO"}, "Experimentation finished")
+		ExperimentBrixelate(context)
+		return {'FINISHED'}
+
+	def invoke(self, context, event):
+		return self.execute(context)
+
+
+class ratioBrixelate(bpy.types.Operator):
+	'''Generates Brixelate ratios for selected object'''
+	bl_idname = "tool.brixelate_ratio"
+	bl_label = "Brixelate Ratio"
+	bl_options = {"UNDO"}
+
+	@classmethod
+	def poll(self, context):
+		if len(context.selected_objects) > 0:
+			number_objects = len(context.selected_objects)
+			mesh_objs = 0
+			for obj in context.selected_objects:
+				if obj.type == 'MESH':
+					mesh_objs += 1
+			if mesh_objs == number_objects:
+				return True
+
+	def execute(self, context):
+		RatioBrixelate(context, method='vol')
+
+		self.report({"INFO"}, "Ratio Experimentation finished")
+
+		return {'FINISHED'}
 
 	def invoke(self, context, event):
 		return self.execute(context)

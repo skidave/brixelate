@@ -96,7 +96,7 @@ class BrixelPanel(bpy.types.Panel):
 
 		layout.separator()
 		topbox = layout.box()
-		topbox.label("Shelling", icon="MESH_GRID")
+		topbox.label("Decomposition", icon="MESH_GRID")
 
 		# row = topbox.row()
 		# row.operator("tool.implementation", text="Create Shell", icon="UGLYPACKAGE")
@@ -132,7 +132,7 @@ class BrixelPanel(bpy.types.Panel):
 		c.prop(settings, 'plane_bounds')
 		split = split.split()
 		c = split.column()
-		c.operator("tool.reset_shelling", text="Reset Shelling",icon="FILE_REFRESH")
+		c.operator("tool.reset_shelling", text="Reset Decomp",icon="FILE_REFRESH")
 		row=topbox.row()
 		row.operator("mesh.auto_split_object", text="Decompose", icon="MOD_BOOLEAN")
 

@@ -30,7 +30,6 @@ class Assembly(object):
 				val = height_dict.get(height, [])
 				val.append(ob.name)
 				height_dict[height] = val
-				print(ob.name)
 
 		heights = []
 		for k in height_dict.keys():

@@ -291,9 +291,9 @@ class automatedSplitting(bpy.types.Operator):
 		objects = bpy.data.objects
 		start = ImplementData.start_point is not None
 		obj_present = ImplementData.object_name in objects
-		viable_split = bpy.types.Scene.surface_check.viable_split
+		#viable_split = bpy.types.Scene.surface_check.viable_split
 
-		return start and obj_present and viable_split
+		return start and obj_present #and viable_split
 
 	def execute(self, context):
 		AutoSplit(context)

@@ -58,7 +58,7 @@ class SimpleBrixelate(object):
 			start_points.append(p)
 
 		# This is for the see sense iterations only - will be removed.
-		custom_start = origin_start_point + Vector((4.19, -3.872, 0))
+		custom_start = origin_start_point# + Vector((4.19, -3.872, 0))
 		start_points = [custom_start]
 
 		if iterations_start_point and ImplementData.start_point is not None:
@@ -204,13 +204,18 @@ class SimpleBrixelate(object):
 
 		dimensions = [x_dim, y_dim, z_dim]
 
-		start_point = vertices[0] + Vector((0, 0, -h * 0.3))
+		#start_point = vertices[0] + Vector((0, 0, -h * 0.3))
 
 		x_brick = math.ceil(x_dim / w)
 		y_brick = math.ceil(y_dim / d)
 		z_brick = math.ceil(z_dim / h)
 
 		xyz_brick = [x_brick, y_brick, z_brick]
+
+		xyz_brick = [b if b%2 else b+1 for b in xyz_brick[:2]]
+		xyz_brick.append(z_brick)
+
+		start_point = Vector((-(xyz_brick[0]-1)/2 * w, -(xyz_brick[1]-1)/2*d, -h*0.3))
 
 		scene.my_settings.show_hide_model = True
 		scene.my_settings.show_hide_lego = True

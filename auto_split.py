@@ -41,6 +41,10 @@ class AutoSplit(object):
 			mesh.separate(type='LOOSE')
 			self.ops.object.mode_set(mode='OBJECT')
 
+			for ob in self.scene.objects:
+				if ob.name.startswith("VertPlane") or ob.name.startswith("SplitPlane"):
+					ob.hide = True
+
 		resultant_objects = [ob for ob in self.scene.objects if ob.name.startswith(self.target_object.name)]
 
 		self.add_horz_planes(resultant_objects, array, start_point)

@@ -58,8 +58,8 @@ class SimpleBrixelate(object):
 			start_points.append(p)
 
 		# This is for the see sense iterations only - will be removed.
-		#custom_start = origin_start_point + Vector((-2.753, -2.753, 0))
-		#start_points = [custom_start]
+		custom_start = origin_start_point + Vector((4.19, -3.872, 0))
+		start_points = [custom_start]
 
 		if iterations_start_point and ImplementData.start_point is not None:
 			start_points = [ImplementData.start_point]

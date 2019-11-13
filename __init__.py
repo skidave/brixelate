@@ -1,5 +1,5 @@
 bl_info = {
-	"name": "Brixelate",
+	"name": "Hybrid Prototyping",
 	"description": "Generates a LEGO and 3D printed Hybrid Prototyping a mesh object",
 	"author": "David Mathias",
 	"version": (1, 0, 0),

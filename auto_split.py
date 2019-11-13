@@ -80,14 +80,14 @@ class AutoSplit(object):
 			tr_ind = [i for i in tr_ind]
 
 			# print(startpoint_index)
-			print("Bottom Left\t{}".format(bl_ind))
-			print("Top Right\t{}".format(tr_ind))
+			#print("Bottom Left\t{}".format(bl_ind))
+			#print("Top Right\t{}".format(tr_ind))
 
 			sliced_array = array[bl_ind[2]:tr_ind[2] + 1, bl_ind[1]:tr_ind[1] + 1, bl_ind[0]:tr_ind[0] + 1]
 
 			diff_from_top = int(z - tr_ind[2] - 1)
-			print(diff_from_top)
-			print(bl_ind[2])
+			#print(diff_from_top)
+			#print(bl_ind[2])
 			horz_positions = self.find_plane_positions(sliced_array, bl_ind[2], diff_from_top)
 
 			if horz_positions is not None:

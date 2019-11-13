@@ -145,7 +145,7 @@ class spinTest(bpy.types.Operator):
 				return True
 
 	def execute(self, context):
-		from brixelate.utils.mesh_utils import get_angles
+		from .utils.mesh_utils import get_angles
 		from mathutils import Vector
 
 		object_selected = context.selected_objects[0]
@@ -291,9 +291,9 @@ class automatedSplitting(bpy.types.Operator):
 		objects = bpy.data.objects
 		start = ImplementData.start_point is not None
 		obj_present = ImplementData.object_name in objects
-		viable_split = bpy.types.Scene.surface_check.viable_split
+		#viable_split = bpy.types.Scene.surface_check.viable_split
 
-		return start and obj_present and viable_split
+		return start and obj_present #and viable_split
 
 	def execute(self, context):
 		AutoSplit(context)

@@ -9,10 +9,10 @@ from .utils.file_utils import csv_write
 
 
 class DataOutput(object):
-	OUTPUT_DIR = os.path.join(os.path.dirname(bpy.data.filepath), 'output')
+
 
 	def __init__(self):
-
+		self.OUTPUT_DIR = os.path.join(os.path.dirname(bpy.data.filepath), 'output')
 		try:
 			os.makedirs(self.OUTPUT_DIR)
 		except FileExistsError:

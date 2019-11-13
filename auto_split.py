@@ -41,6 +41,10 @@ class AutoSplit(object):
 			mesh.separate(type='LOOSE')
 			self.ops.object.mode_set(mode='OBJECT')
 
+			for ob in self.scene.objects:
+				if ob.name.startswith("VertPlane") or ob.name.startswith("SplitPlane"):
+					ob.hide = True
+
 		resultant_objects = [ob for ob in self.scene.objects if ob.name.startswith(self.target_object.name)]
 
 		self.add_horz_planes(resultant_objects, array, start_point)
@@ -54,6 +58,8 @@ class AutoSplit(object):
 		lego_dims = [w, d, h]
 
 		horz_slices = 0
+
+		#print(array.shape)
 
 		for ro in resultant_objects:
 			# print(ro.name)
@@ -71,14 +77,18 @@ class AutoSplit(object):
 			bl_ind = [i if i > 0 else 0 for i in bl_ind]
 			# tr_ind = np.array([math.ceil(v) for v in np.divide(top_right - start_point, lego_dims)]) + startpoint_index
 			tr_ind = np.array([int(round(v)) for v in np.divide(top_right - start_point, lego_dims)]) + startpoint_index
+			tr_ind = [i for i in tr_ind]
 
 			# print(startpoint_index)
-			# print("Bottom Left {}".format(bl_ind))
-			# print("Top Right {}".format(tr_ind))
+			#print("Bottom Left\t{}".format(bl_ind))
+			#print("Top Right\t{}".format(tr_ind))
 
 			sliced_array = array[bl_ind[2]:tr_ind[2] + 1, bl_ind[1]:tr_ind[1] + 1, bl_ind[0]:tr_ind[0] + 1]
 
-			horz_positions = self.find_plane_positions(sliced_array, bl_ind[2])
+			diff_from_top = int(z - tr_ind[2] - 1)
+			#print(diff_from_top)
+			#print(bl_ind[2])
+			horz_positions = self.find_plane_positions(sliced_array, bl_ind[2], diff_from_top)
 
 			if horz_positions is not None:
 				horz_slices += len(horz_positions)
@@ -116,7 +126,7 @@ class AutoSplit(object):
 
 		PrintEstimate(self.context)
 
-	def find_plane_positions(self, array, bottom_index):
+	def find_plane_positions(self, array, bottom_index, top_index):
 		"""Returns a list of zpositions"""
 		zpositions = []
 		possible_positions = []
@@ -164,12 +174,18 @@ class AutoSplit(object):
 				try:
 					above = array[top + 1][y][x]
 				except:
-					above = -1
+					if top_index <= 0:
+						above = -1
+					else:
+						above = 1
 
 				try:
 					below = array[bottom - 1][y][x]
 				except:
-					below = -1
+					if bottom_index == 0:
+						below = -1
+					else:
+						below = 1
 				# print("above: {}, below: {}".format(above, below))
 				if below <= 0:
 					below_count += 1

@@ -1,7 +1,7 @@
 import bpy
 from mathutils import Vector
 
-from brixelate.utils.settings_utils import getSettings
+from .utils.settings_utils import getSettings
 
 
 class Split():

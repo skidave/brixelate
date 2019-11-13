@@ -93,8 +93,9 @@ def SplitPlaneUpdate(context):
 
 	for ob in objects:
 		if ob.name.startswith(plane_names[0]) or ob.name.startswith(plane_names[1]):
-			planes.append(ob)
-			viability.append(0)
+			if ob.hide == False:
+				planes.append(ob)
+				viability.append(0)
 
 	if ImplementData.object_name and planes and objects.is_updated:
 		target_object = objects[ImplementData.object_name]

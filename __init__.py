@@ -1,13 +1,13 @@
 bl_info = {
 	"name": "Hybrid Prototyping",
-	"description": "Generates a LEGO assembly from a mesh object",
+	"description": "Generates a LEGO and 3D printed Hybrid Prototyping a mesh object",
 	"author": "David Mathias",
-	"version": (0, 0, 9),
+	"version": (1, 0, 0),
 	"blender": (2, 79, 0),
 	"location": "Tools",
 	"warning": "",  # used for warning icon and text in addons panel
 	"wiki_url": "",
-	"tracker_url": "",
+	"tracker_url": "https://github.com/skidave/brixelate/issues",
 	"category": "Mesh"
 }
 import bpy

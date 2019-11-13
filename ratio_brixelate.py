@@ -7,9 +7,9 @@ from mathutils import Vector
 import numpy as np
 
 from .simple_brixelate import SimpleBrixelate
-from brixelate.utils.mesh_utils import get_angles
-from brixelate.utils.settings_utils import getSettings
-from brixelate.utils.file_utils import csv_header, csv_write
+from .utils.mesh_utils import get_angles
+from .utils.settings_utils import getSettings
+from .utils.file_utils import csv_header, csv_write
 
 
 class RatioBrixelate(SimpleBrixelate):

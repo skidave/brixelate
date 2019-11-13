@@ -145,7 +145,7 @@ class spinTest(bpy.types.Operator):
 				return True
 
 	def execute(self, context):
-		from brixelate.utils.mesh_utils import get_angles
+		from .utils.mesh_utils import get_angles
 		from mathutils import Vector
 
 		object_selected = context.selected_objects[0]

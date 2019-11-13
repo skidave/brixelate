@@ -5,8 +5,8 @@ import bmesh
 from mathutils import Vector, Color
 import numpy as np
 
-from brixelate.utils.settings_utils import getSettings
-from brixelate.utils.mesh_utils import AutoBoolean
+from .utils.settings_utils import getSettings
+from .utils.mesh_utils import AutoBoolean
 
 
 class legoData():

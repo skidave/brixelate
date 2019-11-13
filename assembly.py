@@ -4,7 +4,7 @@ import bpy
 import bmesh
 from mathutils import Vector
 
-from brixelate.utils.lego_utils import legoData
+from .utils.lego_utils import legoData
 from .implementData import ImplementData
 
 class Assembly(object):

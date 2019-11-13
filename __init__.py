@@ -7,7 +7,7 @@ bl_info = {
 	"location": "Tools",
 	"warning": "",  # used for warning icon and text in addons panel
 	"wiki_url": "",
-	"tracker_url": "https://github.com/skidave/brixelate",
+	"tracker_url": "https://github.com/skidave/brixelate/issues",
 	"category": "Mesh"
 }
 import bpy
